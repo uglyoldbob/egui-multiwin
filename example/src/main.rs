@@ -17,9 +17,7 @@ fn main() {
     let root_window = root::RootWindow::new();
     let root_window2 = popup_window::PopupWindow::new("initial popup".to_string());
 
-    let ac = AppCommon {
-        clicks: 0,
-    };
+    let ac = AppCommon { clicks: 0 };
 
     let _e = multi_window.add(root_window, &event_loop);
     let _e = multi_window.add(root_window2, &event_loop);

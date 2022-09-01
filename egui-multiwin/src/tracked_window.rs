@@ -1,6 +1,6 @@
 use std::{mem, sync::Arc};
 
-use crate::{multi_window::NewWindowRequest};
+use crate::multi_window::NewWindowRequest;
 use egui_glow::EguiGlow;
 use glutin::{
     event::Event,
@@ -20,28 +20,35 @@ pub trait TrackedWindow {
     type Data;
 
     /// Returns true if the window is a root window. Root windows will close all other windows when closed
-    fn is_root(&self) -> bool { false }
+    fn is_root(&self) -> bool {
+        false
+    }
 
     /// Sets whether or not the window is a root window.
     fn set_root(&mut self, _root: bool) {}
 
     /// Runs the redraw for the window. Return true to close the window.
-    fn redraw(
+    fn redraw(&mut self, c: &mut Self::Data, egui: &mut EguiGlow) -> RedrawResponse<Self::Data>;
+
+    fn opengl_before(
         &mut self,
-        c: &mut Self::Data,
-        egui: &mut EguiGlow,
-    ) -> RedrawResponse<Self::Data>;
-
-    fn opengl_before(&mut self, _c: &mut Self::Data, _gl_window: &mut glutin::WindowedContext<PossiblyCurrent>) { }
-    fn opengl_after(&mut self, _c: &mut Self::Data, _gl_window: &mut glutin::WindowedContext<PossiblyCurrent>) { }
-
+        _c: &mut Self::Data,
+        _gl_window: &mut glutin::WindowedContext<PossiblyCurrent>,
+    ) {
+    }
+    fn opengl_after(
+        &mut self,
+        _c: &mut Self::Data,
+        _gl_window: &mut glutin::WindowedContext<PossiblyCurrent>,
+    ) {
+    }
 }
 
 /// Handles one event from the event loop. Returns true if the window needs to be kept alive,
 /// otherwise it will be closed. Window events should be checked to ensure that their ID is one
 /// that the TrackedWindow is interested in.
 fn handle_event<COMMON>(
-    s: &mut dyn TrackedWindow<Data=COMMON>,
+    s: &mut dyn TrackedWindow<Data = COMMON>,
     event: &glutin::event::Event<()>,
     c: &mut COMMON,
     egui: &mut EguiGlow,
@@ -145,12 +152,12 @@ fn handle_event<COMMON>(
 pub struct TrackedWindowContainer<T> {
     pub gl_window: IndeterminateWindowedContext,
     pub egui: Option<EguiGlow>,
-    pub window: Box<dyn TrackedWindow<Data=T>>,
+    pub window: Box<dyn TrackedWindow<Data = T>>,
 }
 
 impl<T> TrackedWindowContainer<T> {
     pub fn create<TE>(
-        window: Box<dyn TrackedWindow<Data=T>>,
+        window: Box<dyn TrackedWindow<Data = T>>,
         window_builder: glutin::window::WindowBuilder,
         event_loop: &glutin::event_loop::EventLoopWindowTarget<TE>,
     ) -> Result<TrackedWindowContainer<T>, DisplayCreationError> {
@@ -230,7 +237,14 @@ impl<T> TrackedWindowContainer<T> {
 
         let result = match self.egui.as_mut() {
             Some(egui) => {
-                let result = handle_event(&mut *self.window, event, c, egui, root_window_exists, &mut gl_window);
+                let result = handle_event(
+                    &mut *self.window,
+                    event,
+                    c,
+                    egui,
+                    root_window_exists,
+                    &mut gl_window,
+                );
                 if let ControlFlow::Exit = result.requested_control_flow {
                     // This window wants to go away. Close it.
                     egui.destroy();

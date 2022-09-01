@@ -1,6 +1,6 @@
 use glutin::event_loop::{ControlFlow, EventLoop};
 
-use crate::tracked_window::{DisplayCreationError, TrackedWindowContainer, TrackedWindow};
+use crate::tracked_window::{DisplayCreationError, TrackedWindow, TrackedWindowContainer};
 
 /// Manages multiple `TrackedWindow`s by forwarding events to them.
 pub struct MultiWindow<T> {
@@ -10,8 +10,7 @@ pub struct MultiWindow<T> {
 impl<T: 'static> MultiWindow<T> {
     /// Creates a new `MultiWindow`.
     pub fn new() -> Self {
-        MultiWindow { windows: vec![]
-        }
+        MultiWindow { windows: vec![] }
     }
 
     /// Adds a new `TrackedWindow` to the `MultiWindow`.
@@ -45,8 +44,12 @@ impl<T: 'static> MultiWindow<T> {
 
         while let Some(mut window) = self.windows.pop() {
             if window.is_event_for_window(&event) {
-                let window_control =
-                    window.handle_event_outer(c, &event, event_loop_window_target, root_window_exists);
+                let window_control = window.handle_event_outer(
+                    c,
+                    &event,
+                    event_loop_window_target,
+                    root_window_exists,
+                );
                 match window_control.requested_control_flow {
                     ControlFlow::Exit => {
                         //println!("window requested exit. Instead of sending the exit for everyone, just get rid of this one.");
@@ -121,6 +124,6 @@ impl<T: 'static> MultiWindow<T> {
 }
 
 pub struct NewWindowRequest<T> {
-    pub window_state: Box<dyn TrackedWindow<Data=T>>,
+    pub window_state: Box<dyn TrackedWindow<Data = T>>,
     pub builder: glutin::window::WindowBuilder,
 }

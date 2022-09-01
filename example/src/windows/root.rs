@@ -1,8 +1,8 @@
+use egui_glow::EguiGlow;
 use egui_multiwin::{
     multi_window::NewWindowRequest,
-    tracked_window::{RedrawResponse, TrackedWindow}
+    tracked_window::{RedrawResponse, TrackedWindow},
 };
-use egui_glow::EguiGlow;
 
 use crate::AppCommon;
 
@@ -38,15 +38,9 @@ impl TrackedWindow for RootWindow {
         true
     }
 
-    fn set_root(&mut self,_root:bool) {
-        
-    }
+    fn set_root(&mut self, _root: bool) {}
 
-    fn redraw(
-        &mut self,
-        c: &mut AppCommon,
-        egui: &mut EguiGlow,
-    ) -> RedrawResponse<Self::Data> {
+    fn redraw(&mut self, c: &mut AppCommon, egui: &mut EguiGlow) -> RedrawResponse<Self::Data> {
         let mut quit = false;
 
         let mut windows_to_create = vec![];

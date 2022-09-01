@@ -1,8 +1,8 @@
+use egui_glow::EguiGlow;
 use egui_multiwin::{
     multi_window::NewWindowRequest,
-    tracked_window::{RedrawResponse, TrackedWindow}
+    tracked_window::{RedrawResponse, TrackedWindow},
 };
-use egui_glow::EguiGlow;
 
 use crate::AppCommon;
 
@@ -30,11 +30,7 @@ impl PopupWindow {
 impl TrackedWindow for PopupWindow {
     type Data = AppCommon;
 
-    fn redraw(
-        &mut self,
-        c: &mut Self::Data,
-        egui: &mut EguiGlow,
-    ) -> RedrawResponse<Self::Data> {
+    fn redraw(&mut self, c: &mut Self::Data, egui: &mut EguiGlow) -> RedrawResponse<Self::Data> {
         let mut quit = false;
 
         egui::CentralPanel::default().show(&egui.egui_ctx, |ui| {
