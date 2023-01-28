@@ -1,4 +1,4 @@
-use egui_glow::EguiGlow;
+use egui_multiwin::egui_glow::EguiGlow;
 use egui_multiwin::{
     multi_window::NewWindowRequest,
     tracked_window::{RedrawResponse, TrackedWindow},
@@ -20,9 +20,9 @@ impl RootWindow {
                 button_press_count: 0,
                 num_popups_created: 0,
             }),
-            builder: glutin::window::WindowBuilder::new()
+            builder: egui_multiwin::glutin::window::WindowBuilder::new()
                 .with_resizable(true)
-                .with_inner_size(glutin::dpi::LogicalSize {
+                .with_inner_size(egui_multiwin::glutin::dpi::LogicalSize {
                     width: 800.0,
                     height: 600.0,
                 })
@@ -48,7 +48,7 @@ impl TrackedWindow for RootWindow {
 
         let mut windows_to_create = vec![];
 
-        egui::SidePanel::left("my_side_panel").show(&egui.egui_ctx, |ui| {
+        egui_multiwin::egui::SidePanel::left("my_side_panel").show(&egui.egui_ctx, |ui| {
             ui.heading("Hello World!");
             if ui.button("New popup").clicked() {
                 windows_to_create.push(PopupWindow::new(format!(
@@ -61,7 +61,7 @@ impl TrackedWindow for RootWindow {
                 quit = true;
             }
         });
-        egui::CentralPanel::default().show(&egui.egui_ctx, |ui| {
+        egui_multiwin::egui::CentralPanel::default().show(&egui.egui_ctx, |ui| {
             ui.heading(format!("number {}", c.clicks));
         });
         RedrawResponse {

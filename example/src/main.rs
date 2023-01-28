@@ -1,5 +1,3 @@
-pub use {egui, egui_glow, glutin};
-
 use egui_multiwin::multi_window::MultiWindow;
 
 mod windows;
@@ -14,7 +12,7 @@ pub struct AppCommon {
 }
 
 fn main() {
-    let event_loop = glutin::event_loop::EventLoopBuilder::with_user_event().build();
+    let event_loop = egui_multiwin::glutin::event_loop::EventLoopBuilder::with_user_event().build();
     let mut multi_window = MultiWindow::new();
     let root_window = root::RootWindow::new();
     let root_window2 = popup_window::PopupWindow::new("initial popup".to_string());

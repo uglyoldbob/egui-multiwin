@@ -860,10 +860,7 @@ dependencies = [
 name = "multiwin-demo"
 version = "0.1.0"
 dependencies = [
- "egui",
  "egui-multiwin",
- "egui_glow",
- "glutin",
 ]
 
 [[package]]
