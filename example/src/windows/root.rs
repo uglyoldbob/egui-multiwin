@@ -29,6 +29,7 @@ impl RootWindow {
                 .with_title("egui-multiwin root window"),
             options: egui_multiwin::tracked_window::TrackedWindowOptions {
                     vsync: false,
+                    shader: None,
                 },
         }
     }

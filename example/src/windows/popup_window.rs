@@ -25,6 +25,7 @@ impl PopupWindow {
                 .with_title(label),
             options: egui_multiwin::tracked_window::TrackedWindowOptions {
                     vsync: false,
+                    shader: None,
                 },
         }
     }

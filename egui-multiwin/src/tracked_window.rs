@@ -151,12 +151,14 @@ fn handle_event<COMMON>(
 
 pub struct TrackedWindowOptions {
     pub vsync: bool,
+    pub shader: Option<egui_glow::ShaderVersion>,
 }
 
 pub struct TrackedWindowContainer<T> {
     pub gl_window: IndeterminateWindowedContext,
     pub egui: Option<EguiGlow>,
     pub window: Box<dyn TrackedWindow<Data = T>>,
+    pub shader: Option<egui_glow::ShaderVersion>,
 }
 
 impl<T> TrackedWindowContainer<T> {
@@ -177,6 +179,7 @@ impl<T> TrackedWindowContainer<T> {
             window,
             gl_window: IndeterminateWindowedContext::NotCurrent(gl_window),
             egui: None,
+            shader: options.shader,
         })
     }
 
@@ -234,7 +237,7 @@ impl<T> TrackedWindowContainer<T> {
                     gl.enable(glow::FRAMEBUFFER_SRGB);
                 }
 
-                let egui = egui_glow::EguiGlow::new(&el, gl.clone());
+                let egui = egui_glow::EguiGlow::new(&el, gl.clone(), self.shader);
                 self.egui = Some(egui);
             }
             Some(_) => (),
