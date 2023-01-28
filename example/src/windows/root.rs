@@ -27,6 +27,9 @@ impl RootWindow {
                     height: 600.0,
                 })
                 .with_title("egui-multiwin root window"),
+            options: egui_multiwin::tracked_window::TrackedWindowOptions {
+                    vsync: false,
+                },
         }
     }
 }

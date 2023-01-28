@@ -1,6 +1,6 @@
 use glutin::event_loop::{ControlFlow, EventLoop};
 
-use crate::tracked_window::{DisplayCreationError, TrackedWindow, TrackedWindowContainer};
+use crate::tracked_window::{DisplayCreationError, TrackedWindow, TrackedWindowContainer, TrackedWindowOptions};
 
 /// Manages multiple `TrackedWindow`s by forwarding events to them.
 pub struct MultiWindow<T> {
@@ -23,6 +23,7 @@ impl<T: 'static> MultiWindow<T> {
             window.window_state,
             window.builder,
             event_loop,
+            &window.options,
         )?)))
     }
 
@@ -126,4 +127,5 @@ impl<T: 'static> MultiWindow<T> {
 pub struct NewWindowRequest<T> {
     pub window_state: Box<dyn TrackedWindow<Data = T>>,
     pub builder: glutin::window::WindowBuilder,
+    pub options: TrackedWindowOptions,
 }

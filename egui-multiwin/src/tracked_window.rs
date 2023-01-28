@@ -149,6 +149,10 @@ fn handle_event<COMMON>(
     }
 }
 
+pub struct TrackedWindowOptions {
+    pub vsync: bool,
+}
+
 pub struct TrackedWindowContainer<T> {
     pub gl_window: IndeterminateWindowedContext,
     pub egui: Option<EguiGlow>,
@@ -160,12 +164,13 @@ impl<T> TrackedWindowContainer<T> {
         window: Box<dyn TrackedWindow<Data = T>>,
         window_builder: glutin::window::WindowBuilder,
         event_loop: &glutin::event_loop::EventLoopWindowTarget<TE>,
+        options: &TrackedWindowOptions,
     ) -> Result<TrackedWindowContainer<T>, DisplayCreationError> {
         let gl_window = glutin::ContextBuilder::new()
             .with_depth_buffer(0)
             .with_srgb(true)
             .with_stencil_buffer(0)
-            .with_vsync(true)
+            .with_vsync(options.vsync)
             .build_windowed(window_builder, event_loop)?;
 
         Ok(TrackedWindowContainer {

@@ -23,6 +23,9 @@ impl PopupWindow {
                     height: 200.0,
                 })
                 .with_title(label),
+            options: egui_multiwin::tracked_window::TrackedWindowOptions {
+                    vsync: false,
+                },
         }
     }
 }
