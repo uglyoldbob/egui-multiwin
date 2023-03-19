@@ -129,3 +129,9 @@ pub struct NewWindowRequest<T> {
     pub builder: glutin::window::WindowBuilder,
     pub options: TrackedWindowOptions,
 }
+
+impl<T> NewWindowRequest<T> {
+    pub fn window(&mut self) -> &mut Box<dyn TrackedWindow<Data = T>> {
+        &mut self.window_state
+    }
+}
