@@ -1,13 +1,85 @@
+use std::num::NonZeroU32;
 use std::{mem, sync::Arc};
 
 use crate::multi_window::NewWindowRequest;
+use egui_glow::glow;
 use egui_glow::EguiGlow;
-use glutin::{
+use glutin::context::{NotCurrentContext, PossiblyCurrentContext};
+use glutin::prelude::{GlConfig, GlDisplay};
+use glutin::prelude::{
+    NotCurrentGlContextSurfaceAccessor, PossiblyCurrentContextGlSurfaceAccessor,
+};
+use glutin::surface::GlSurface;
+use glutin::surface::SurfaceAttributesBuilder;
+use glutin::surface::WindowSurface;
+use raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle};
+use thiserror::Error;
+use winit::{
     event::Event,
     event_loop::{ControlFlow, EventLoopWindowTarget},
-    PossiblyCurrent,
 };
-use thiserror::Error;
+
+pub struct ContextHolder<T> {
+    context: T,
+    window: winit::window::Window,
+    ws: glutin::surface::Surface<WindowSurface>,
+    display: glutin::display::Display,
+}
+
+impl<T> ContextHolder<T> {
+    fn new(
+        context: T,
+        window: winit::window::Window,
+        ws: glutin::surface::Surface<WindowSurface>,
+        display: glutin::display::Display,
+    ) -> Self {
+        Self {
+            context,
+            window,
+            ws,
+            display,
+        }
+    }
+}
+
+impl ContextHolder<PossiblyCurrentContext> {
+    fn swap_buffers(&self) -> glutin::error::Result<()> {
+        self.ws.swap_buffers(&self.context)
+    }
+
+    fn resize(&self, size: winit::dpi::PhysicalSize<u32>) {
+        let w = size.width;
+        let h = size.height;
+        self.ws.resize(
+            &self.context,
+            NonZeroU32::new(w).unwrap(),
+            NonZeroU32::new(h).unwrap(),
+        )
+    }
+
+    fn make_current(&self) -> glutin::error::Result<()> {
+        self.context.make_current(&self.ws)
+    }
+
+    fn get_proc_address(&self, s: &str) -> *const std::ffi::c_void {
+        let cs: *const std::ffi::c_char = s.as_ptr().cast();
+        let cst = unsafe { std::ffi::CStr::from_ptr(cs) };
+        self.display.get_proc_address(cst)
+    }
+}
+
+impl ContextHolder<NotCurrentContext> {
+    fn make_current(self) -> Result<ContextHolder<PossiblyCurrentContext>, glutin::error::Error> {
+        let c = self.context.make_current(&self.ws).unwrap();
+        let s = ContextHolder::<PossiblyCurrentContext> {
+            context: c,
+            window: self.window,
+            ws: self.ws,
+            display: self.display,
+        };
+        Ok(s)
+    }
+}
 
 pub struct RedrawResponse<T> {
     pub quit: bool,
@@ -33,13 +105,13 @@ pub trait TrackedWindow {
     fn opengl_before(
         &mut self,
         _c: &mut Self::Data,
-        _gl_window: &mut glutin::WindowedContext<PossiblyCurrent>,
+        _gl_window: &mut ContextHolder<PossiblyCurrentContext>,
     ) {
     }
     fn opengl_after(
         &mut self,
         _c: &mut Self::Data,
-        _gl_window: &mut glutin::WindowedContext<PossiblyCurrent>,
+        _gl_window: &mut ContextHolder<PossiblyCurrentContext>,
     ) {
     }
 }
@@ -49,17 +121,17 @@ pub trait TrackedWindow {
 /// that the TrackedWindow is interested in.
 fn handle_event<COMMON>(
     s: &mut dyn TrackedWindow<Data = COMMON>,
-    event: &glutin::event::Event<()>,
+    event: &winit::event::Event<()>,
     c: &mut COMMON,
     egui: &mut EguiGlow,
     root_window_exists: bool,
-    gl_window: &mut glutin::WindowedContext<PossiblyCurrent>,
+    gl_window: &mut ContextHolder<PossiblyCurrentContext>,
 ) -> TrackedWindowControl<COMMON> {
     // Child window's requested control flow.
     let mut control_flow = ControlFlow::Wait; // Unless this changes, we're fine waiting until the next event comes in.
 
     let mut redraw = || {
-        let input = egui.egui_winit.take_egui_input(gl_window.window());
+        let input = egui.egui_winit.take_egui_input(&gl_window.window);
         let ppp = input.pixels_per_point;
         egui.egui_ctx.begin_frame(input);
 
@@ -68,12 +140,12 @@ fn handle_event<COMMON>(
         let full_output = egui.egui_ctx.end_frame();
 
         if rr.quit {
-            control_flow = glutin::event_loop::ControlFlow::Exit;
+            control_flow = winit::event_loop::ControlFlow::Exit;
         } else if full_output.repaint_after.is_zero() {
-            gl_window.window().request_redraw();
-            control_flow = glutin::event_loop::ControlFlow::Poll;
+            gl_window.window.request_redraw();
+            control_flow = winit::event_loop::ControlFlow::Poll;
         } else {
-            control_flow = glutin::event_loop::ControlFlow::Wait;
+            control_flow = winit::event_loop::ControlFlow::Wait;
         };
 
         {
@@ -91,7 +163,7 @@ fn handle_event<COMMON>(
 
             let prim = egui.egui_ctx.tessellate(full_output.shapes);
             egui.painter.paint_and_update_textures(
-                gl_window.window().inner_size().into(),
+                gl_window.window.inner_size().into(),
                 ppp.unwrap_or(1.0),
                 &prim[..],
                 &full_output.textures_delta,
@@ -109,24 +181,26 @@ fn handle_event<COMMON>(
         // Platform-dependent event handlers to workaround a winit bug
         // See: https://github.com/rust-windowing/winit/issues/987
         // See: https://github.com/rust-windowing/winit/issues/1619
-        glutin::event::Event::RedrawEventsCleared if cfg!(windows) => Some(redraw()),
-        glutin::event::Event::RedrawRequested(_) if !cfg!(windows) => Some(redraw()),
+        winit::event::Event::RedrawEventsCleared if cfg!(windows) => Some(redraw()),
+        winit::event::Event::RedrawRequested(_) if !cfg!(windows) => Some(redraw()),
 
-        glutin::event::Event::WindowEvent { event, .. } => {
-            if let glutin::event::WindowEvent::Resized(physical_size) = event {
+        winit::event::Event::WindowEvent { event, .. } => {
+            if let winit::event::WindowEvent::Resized(physical_size) = event {
                 gl_window.resize(*physical_size);
             }
 
-            if let glutin::event::WindowEvent::CloseRequested = event {
-                control_flow = glutin::event_loop::ControlFlow::Exit;
+            if let winit::event::WindowEvent::CloseRequested = event {
+                control_flow = winit::event_loop::ControlFlow::Exit;
             }
 
-            egui.on_event(event);
+            let resp = egui.on_event(event);
+            if resp.repaint {
+                gl_window.window.request_redraw();
+            }
 
-            gl_window.window().request_redraw(); // TODO: ask egui if the events warrants a repaint instead
             None
         }
-        glutin::event::Event::LoopDestroyed => {
+        winit::event::Event::LoopDestroyed => {
             egui.destroy();
             None
         }
@@ -162,28 +236,76 @@ pub struct TrackedWindowContainer<T> {
 }
 
 impl<T> TrackedWindowContainer<T> {
-    pub fn create<TE>(
-        window: Box<dyn TrackedWindow<Data = T>>,
-        window_builder: glutin::window::WindowBuilder,
-        event_loop: &glutin::event_loop::EventLoopWindowTarget<TE>,
-        options: &TrackedWindowOptions,
-    ) -> Result<TrackedWindowContainer<T>, DisplayCreationError> {
-        let gl_window = glutin::ContextBuilder::new()
-            .with_depth_buffer(0)
-            .with_srgb(true)
-            .with_stencil_buffer(0)
-            .with_vsync(options.vsync)
-            .build_windowed(window_builder, event_loop)?;
+    fn try_make<TE>(
+        window_builder: winit::window::WindowBuilder,
+        event_loop: &winit::event_loop::EventLoopWindowTarget<TE>,
+    ) -> Result<
+        (
+            glutin::context::NotCurrentContext,
+            winit::window::Window,
+            glutin::surface::Surface<WindowSurface>,
+            glutin::display::Display,
+        ),
+        (),
+    > {
+        let rdh = event_loop.raw_display_handle();
+        let pref = glutin::display::DisplayApiPreference::Egl;
+        let display = unsafe { glutin::display::Display::new(rdh, pref).unwrap() };
+        println!("I made a display1");
+        let configt = glutin::config::ConfigTemplateBuilder::default().build();
+        let config = unsafe { display.find_configs(configt) }
+            .unwrap()
+            .reduce(|config, acc| {
+                if config.num_samples() > acc.num_samples() {
+                    config
+                } else {
+                    acc
+                }
+            });
+        if let Some(config) = config {
+            let winitwindow = window_builder.clone().build(&event_loop).unwrap();
+            let rwh = Some(winitwindow.raw_window_handle());
+            let sab: SurfaceAttributesBuilder<WindowSurface> =
+                glutin::surface::SurfaceAttributesBuilder::default();
+            let sa = sab.build(
+                rwh.unwrap(),
+                std::num::NonZeroU32::new(winitwindow.inner_size().width).unwrap(),
+                std::num::NonZeroU32::new(winitwindow.inner_size().height).unwrap(),
+            );
+            let ws = unsafe { display.create_window_surface(&config, &sa).unwrap() };
 
-        Ok(TrackedWindowContainer {
-            window,
-            gl_window: IndeterminateWindowedContext::NotCurrent(gl_window),
-            egui: None,
-            shader: options.shader,
-        })
+            let attr = glutin::context::ContextAttributesBuilder::new().build(rwh);
+
+            let gl_window = unsafe { display.create_context(&config, &attr).unwrap() };
+
+            Ok((gl_window, winitwindow, ws, display))
+        }
+        else {
+            Err(())
+        }
     }
 
-    pub fn is_event_for_window(&self, event: &glutin::event::Event<()>) -> bool {
+    pub fn create<TE>(
+        window: Box<dyn TrackedWindow<Data = T>>,
+        window_builder: winit::window::WindowBuilder,
+        event_loop: &winit::event_loop::EventLoopWindowTarget<TE>,
+        options: &TrackedWindowOptions,
+    ) -> Result<TrackedWindowContainer<T>, DisplayCreationError> {
+        let egl = Self::try_make(window_builder, event_loop);
+        if egl.is_ok() {
+            let (a, b, c, d) = egl.unwrap();
+            Ok(TrackedWindowContainer {
+                window,
+                gl_window: IndeterminateWindowedContext::NotCurrent(ContextHolder::new(a, b, c, d)),
+                egui: None,
+                shader: options.shader,
+            })
+        } else {
+            panic!("No window created");
+        }
+    }
+
+    pub fn is_event_for_window(&self, event: &winit::event::Event<()>) -> bool {
         // Check if the window ID matches, if not then this window can pass on the event.
         match (event, &self.gl_window) {
             (
@@ -193,7 +315,7 @@ impl<T> TrackedWindowContainer<T> {
                     ..
                 },
                 IndeterminateWindowedContext::PossiblyCurrent(gl_window),
-            ) => gl_window.window().id() == *id,
+            ) => gl_window.window.id() == *id,
             (
                 Event::WindowEvent {
                     window_id: id,
@@ -201,7 +323,7 @@ impl<T> TrackedWindowContainer<T> {
                     ..
                 },
                 IndeterminateWindowedContext::NotCurrent(gl_window),
-            ) => gl_window.window().id() == *id,
+            ) => gl_window.window.id() == *id,
             _ => true, // we weren't able to check the window ID, maybe this window is not initialized yet. we should run it.
         }
     }
@@ -209,7 +331,7 @@ impl<T> TrackedWindowContainer<T> {
     pub fn handle_event_outer<U>(
         &mut self,
         c: &mut T,
-        event: &glutin::event::Event<()>,
+        event: &winit::event::Event<()>,
         el: &EventLoopWindowTarget<U>,
         root_window_exists: bool,
     ) -> TrackedWindowControl<T> {
@@ -219,7 +341,8 @@ impl<T> TrackedWindowContainer<T> {
         let gl_window = mem::replace(&mut self.gl_window, IndeterminateWindowedContext::None);
         let mut gl_window = match gl_window {
             IndeterminateWindowedContext::PossiblyCurrent(w) => unsafe {
-                w.make_current().unwrap()
+                w.make_current().unwrap();
+                w
             },
             IndeterminateWindowedContext::NotCurrent(w) => unsafe { w.make_current().unwrap() },
             IndeterminateWindowedContext::None => panic!("there's no window context???"),
@@ -278,8 +401,8 @@ impl<T> TrackedWindowContainer<T> {
 }
 
 pub enum IndeterminateWindowedContext {
-    PossiblyCurrent(glutin::WindowedContext<glutin::PossiblyCurrent>),
-    NotCurrent(glutin::WindowedContext<glutin::NotCurrent>),
+    PossiblyCurrent(ContextHolder<PossiblyCurrentContext>),
+    NotCurrent(ContextHolder<NotCurrentContext>),
     None,
 }
 
@@ -289,9 +412,4 @@ pub struct TrackedWindowControl<T> {
 }
 
 #[derive(Error, Debug)]
-pub enum DisplayCreationError {
-    #[error("couldn't create window {0}")]
-    Creation(#[from] glutin::CreationError),
-    #[error("couldn't create context {0:?}")]
-    Context(#[from] glutin::ContextError),
-}
+pub enum DisplayCreationError {}

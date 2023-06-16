@@ -1,6 +1,8 @@
-use glutin::event_loop::{ControlFlow, EventLoop};
+use winit::event_loop::{ControlFlow, EventLoop};
 
-use crate::tracked_window::{DisplayCreationError, TrackedWindow, TrackedWindowContainer, TrackedWindowOptions};
+use crate::tracked_window::{
+    DisplayCreationError, TrackedWindow, TrackedWindowContainer, TrackedWindowOptions,
+};
 
 /// Manages multiple `TrackedWindow`s by forwarding events to them.
 pub struct MultiWindow<T> {
@@ -17,21 +19,23 @@ impl<T: 'static> MultiWindow<T> {
     pub fn add<TE>(
         &mut self,
         window: NewWindowRequest<T>,
-        event_loop: &glutin::event_loop::EventLoopWindowTarget<TE>,
+        event_loop: &winit::event_loop::EventLoopWindowTarget<TE>,
     ) -> Result<(), DisplayCreationError> {
-        Ok(self.windows.push(Box::new(TrackedWindowContainer::create(
-            window.window_state,
-            window.builder,
-            event_loop,
-            &window.options,
-        )?)))
+        Ok(self
+            .windows
+            .push(Box::new(TrackedWindowContainer::create::<TE>(
+                window.window_state,
+                window.builder,
+                &event_loop,
+                &window.options,
+            )?)))
     }
 
     pub fn do_window_events(
         &mut self,
         c: &mut T,
-        event: &glutin::event::Event<()>,
-        event_loop_window_target: &glutin::event_loop::EventLoopWindowTarget<()>,
+        event: &winit::event::Event<()>,
+        event_loop_window_target: &winit::event_loop::EventLoopWindowTarget<()>,
     ) -> Vec<ControlFlow> {
         let mut handled_windows = vec![];
         let mut window_control_flow = vec![];
@@ -81,7 +85,7 @@ impl<T: 'static> MultiWindow<T> {
     pub fn run(mut self, event_loop: EventLoop<()>, mut c: T) {
         event_loop.run(move |event, event_loop_window_target, flow| {
             let c = &mut c;
-            //println!("handling event {:?}", event);
+            println!("handling event {:?}", event);
             let window_control_flow = self.do_window_events(c, &event, &event_loop_window_target);
 
             // If any window requested polling, we should poll.
@@ -126,7 +130,7 @@ impl<T: 'static> MultiWindow<T> {
 
 pub struct NewWindowRequest<T> {
     pub window_state: Box<dyn TrackedWindow<Data = T>>,
-    pub builder: glutin::window::WindowBuilder,
+    pub builder: winit::window::WindowBuilder,
     pub options: TrackedWindowOptions,
 }
 
