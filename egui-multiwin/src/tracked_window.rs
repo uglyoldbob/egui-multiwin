@@ -236,73 +236,50 @@ pub struct TrackedWindowContainer<T> {
 }
 
 impl<T> TrackedWindowContainer<T> {
-    fn try_make<TE>(
-        window_builder: winit::window::WindowBuilder,
-        event_loop: &winit::event_loop::EventLoopWindowTarget<TE>,
-    ) -> Result<
-        (
-            glutin::context::NotCurrentContext,
-            winit::window::Window,
-            glutin::surface::Surface<WindowSurface>,
-            glutin::display::Display,
-        ),
-        (),
-    > {
-        let rdh = event_loop.raw_display_handle();
-        let pref = glutin::display::DisplayApiPreference::Egl;
-        let display = unsafe { glutin::display::Display::new(rdh, pref).unwrap() };
-        println!("I made a display1");
-        let configt = glutin::config::ConfigTemplateBuilder::default().build();
-        let config = unsafe { display.find_configs(configt) }
-            .unwrap()
-            .reduce(|config, acc| {
-                if config.num_samples() > acc.num_samples() {
-                    config
-                } else {
-                    acc
-                }
-            });
-        if let Some(config) = config {
-            let winitwindow = window_builder.clone().build(&event_loop).unwrap();
-            let rwh = Some(winitwindow.raw_window_handle());
-            let sab: SurfaceAttributesBuilder<WindowSurface> =
-                glutin::surface::SurfaceAttributesBuilder::default();
-            let sa = sab.build(
-                rwh.unwrap(),
-                std::num::NonZeroU32::new(winitwindow.inner_size().width).unwrap(),
-                std::num::NonZeroU32::new(winitwindow.inner_size().height).unwrap(),
-            );
-            let ws = unsafe { display.create_window_surface(&config, &sa).unwrap() };
-
-            let attr = glutin::context::ContextAttributesBuilder::new().build(rwh);
-
-            let gl_window = unsafe { display.create_context(&config, &attr).unwrap() };
-
-            Ok((gl_window, winitwindow, ws, display))
-        }
-        else {
-            Err(())
-        }
-    }
-
     pub fn create<TE>(
         window: Box<dyn TrackedWindow<Data = T>>,
         window_builder: winit::window::WindowBuilder,
         event_loop: &winit::event_loop::EventLoopWindowTarget<TE>,
         options: &TrackedWindowOptions,
     ) -> Result<TrackedWindowContainer<T>, DisplayCreationError> {
-        let egl = Self::try_make(window_builder, event_loop);
-        if egl.is_ok() {
-            let (a, b, c, d) = egl.unwrap();
-            Ok(TrackedWindowContainer {
-                window,
-                gl_window: IndeterminateWindowedContext::NotCurrent(ContextHolder::new(a, b, c, d)),
-                egui: None,
-                shader: options.shader,
-            })
-        } else {
-            panic!("No window created");
+        let rdh = event_loop.raw_display_handle();
+        let pref = glutin::display::DisplayApiPreference::Egl;
+        let display = unsafe { glutin::display::Display::new(rdh, pref) };
+            if let Ok(display) = display {
+            let configt = glutin::config::ConfigTemplateBuilder::default().build();
+            let config = unsafe { display.find_configs(configt) }
+                .unwrap()
+                .reduce(|config, acc| {
+                    if config.num_samples() > acc.num_samples() {
+                        config
+                    } else {
+                        acc
+                    }
+                });
+            if let Some(config) = config {
+                let winitwindow = window_builder.build(&event_loop).unwrap();
+                let rwh = Some(winitwindow.raw_window_handle());
+                let sab: SurfaceAttributesBuilder<WindowSurface> =
+                    glutin::surface::SurfaceAttributesBuilder::default();
+                let sa = sab.build(
+                    rwh.unwrap(),
+                    std::num::NonZeroU32::new(winitwindow.inner_size().width).unwrap(),
+                    std::num::NonZeroU32::new(winitwindow.inner_size().height).unwrap(),
+                );
+                let ws = unsafe { display.create_window_surface(&config, &sa).unwrap() };
+
+                let attr = glutin::context::ContextAttributesBuilder::new().build(rwh);
+
+                let gl_window = unsafe { display.create_context(&config, &attr).unwrap() };
+
+                return Ok(TrackedWindowContainer {window,
+                    gl_window: IndeterminateWindowedContext::NotCurrent(ContextHolder::new(gl_window, winitwindow, ws, display)),
+                    egui: None,
+                    shader: options.shader,
+                });
+            }
         }
+        panic!("No window created");
     }
 
     pub fn is_event_for_window(&self, event: &winit::event::Event<()>) -> bool {
