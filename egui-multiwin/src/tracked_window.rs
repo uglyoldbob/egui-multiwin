@@ -2,8 +2,11 @@ use std::num::NonZeroU32;
 use std::{mem, sync::Arc};
 
 use crate::multi_window::NewWindowRequest;
+use egui_glow::egui_winit::winit::event::Event;
+use egui_glow::egui_winit::winit::event_loop::{ControlFlow, EventLoopWindowTarget};
 use egui_glow::glow;
 use egui_glow::EguiGlow;
+use egui_glow::winit::egui_winit::winit;
 use glutin::context::{NotCurrentContext, PossiblyCurrentContext};
 use glutin::prelude::{GlConfig, GlDisplay};
 use glutin::prelude::{
@@ -14,10 +17,6 @@ use glutin::surface::SurfaceAttributesBuilder;
 use glutin::surface::WindowSurface;
 use raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle};
 use thiserror::Error;
-use winit::{
-    event::Event,
-    event_loop::{ControlFlow, EventLoopWindowTarget},
-};
 
 pub struct ContextHolder<T> {
     context: T,
@@ -242,11 +241,22 @@ impl<T> TrackedWindowContainer<T> {
         event_loop: &winit::event_loop::EventLoopWindowTarget<TE>,
         options: &TrackedWindowOptions,
     ) -> Result<TrackedWindowContainer<T>, DisplayCreationError> {
+        let winitwindow = window_builder.build(&event_loop).unwrap();
+        let rwh = Some(winitwindow.raw_window_handle());
         let rdh = event_loop.raw_display_handle();
-        let pref = glutin::display::DisplayApiPreference::Egl;
-        let display = unsafe { glutin::display::Display::new(rdh, pref) };
-            if let Ok(display) = display {
-            let configt = glutin::config::ConfigTemplateBuilder::default().build();
+        let configt = glutin::config::ConfigTemplateBuilder::default().build();
+        let sab: SurfaceAttributesBuilder<WindowSurface> =
+            glutin::surface::SurfaceAttributesBuilder::default();
+        let sa = sab.build(
+            rwh.unwrap(),
+            std::num::NonZeroU32::new(winitwindow.inner_size().width).unwrap(),
+            std::num::NonZeroU32::new(winitwindow.inner_size().height).unwrap(),
+        );
+        let attr = glutin::context::ContextAttributesBuilder::new().build(rwh);
+        let display = unsafe {
+            glutin::display::Display::new(rdh, glutin::display::DisplayApiPreference::Egl)
+        };
+        if let Ok(display) = display {
             let config = unsafe { display.find_configs(configt) }
                 .unwrap()
                 .reduce(|config, acc| {
@@ -257,28 +267,38 @@ impl<T> TrackedWindowContainer<T> {
                     }
                 });
             if let Some(config) = config {
-                let winitwindow = window_builder.build(&event_loop).unwrap();
-                let rwh = Some(winitwindow.raw_window_handle());
-                let sab: SurfaceAttributesBuilder<WindowSurface> =
-                    glutin::surface::SurfaceAttributesBuilder::default();
-                let sa = sab.build(
-                    rwh.unwrap(),
-                    std::num::NonZeroU32::new(winitwindow.inner_size().width).unwrap(),
-                    std::num::NonZeroU32::new(winitwindow.inner_size().height).unwrap(),
-                );
                 let ws = unsafe { display.create_window_surface(&config, &sa).unwrap() };
-
-                let attr = glutin::context::ContextAttributesBuilder::new().build(rwh);
-
                 let gl_window = unsafe { display.create_context(&config, &attr).unwrap() };
-
-                return Ok(TrackedWindowContainer {window,
-                    gl_window: IndeterminateWindowedContext::NotCurrent(ContextHolder::new(gl_window, winitwindow, ws, display)),
+                return Ok(TrackedWindowContainer {
+                    window,
+                    gl_window: IndeterminateWindowedContext::NotCurrent(ContextHolder::new(
+                        gl_window,
+                        winitwindow,
+                        ws,
+                        display,
+                    )),
                     egui: None,
                     shader: options.shader,
                 });
             }
         }
+
+        let devices = glutin::api::egl::device::Device::query_devices();
+        if let Ok(devices) = devices {
+            println!("Got some devices");
+            let devices = devices.collect::<Vec<_>>();
+            for (index, device) in devices.iter().enumerate() {
+                println!(
+                    "Device {}: Name: {} Vendor: {}",
+                    index,
+                    device.name().unwrap_or("UNKNOWN"),
+                    device.vendor().unwrap_or("UNKNOWN")
+                );
+            }
+        }
+
+        
+        
         panic!("No window created");
     }
 

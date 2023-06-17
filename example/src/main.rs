@@ -12,7 +12,7 @@ pub struct AppCommon {
 }
 
 fn main() {
-    let event_loop = egui_multiwin::winit::event_loop::EventLoopBuilder::with_user_event().build();
+    let event_loop = egui_multiwin::egui_glow::egui_winit::winit::event_loop::EventLoopBuilder::with_user_event().build();
     let mut multi_window = MultiWindow::new();
     let root_window = root::RootWindow::new();
     let root_window2 = popup_window::PopupWindow::new("initial popup".to_string());
