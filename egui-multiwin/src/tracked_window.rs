@@ -2,6 +2,7 @@ use std::num::NonZeroU32;
 use std::{mem, sync::Arc};
 
 use crate::multi_window::NewWindowRequest;
+use egui_glow::egui_winit::egui;
 use egui_glow::egui_winit::winit::event::Event;
 use egui_glow::egui_winit::winit::event_loop::{ControlFlow, EventLoopWindowTarget};
 use egui_glow::glow;

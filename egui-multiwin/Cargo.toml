@@ -9,7 +9,6 @@ publish = ["crates-io"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-egui = "0.22"
 egui_glow = { path="../../egui/crates/egui_glow", version = "0.22", features = ["clipboard", "winit", "links"]}
 glutin = "0.30.8"
 raw-window-handle = "0.5.2"
