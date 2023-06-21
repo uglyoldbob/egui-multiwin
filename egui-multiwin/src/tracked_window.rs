@@ -243,7 +243,10 @@ impl<T> TrackedWindowContainer<T> {
         options: &TrackedWindowOptions,
     ) -> Result<TrackedWindowContainer<T>, DisplayCreationError> {
         let rdh = event_loop.raw_display_handle();
-        let pref = glutin::display::DisplayApiPreference::Egl;
+        let winitwindow = window_builder.build(&event_loop).unwrap();
+        let rwh = winitwindow.raw_window_handle();
+        #[cfg(target_os="windows")]
+        let pref = glutin::display::DisplayApiPreference::Wgl(Some(rwh));
         let display = unsafe { glutin::display::Display::new(rdh, pref) };
             if let Ok(display) = display {
             let configt = glutin::config::ConfigTemplateBuilder::default().build();
@@ -257,18 +260,16 @@ impl<T> TrackedWindowContainer<T> {
                     }
                 });
             if let Some(config) = config {
-                let winitwindow = window_builder.build(&event_loop).unwrap();
-                let rwh = Some(winitwindow.raw_window_handle());
                 let sab: SurfaceAttributesBuilder<WindowSurface> =
                     glutin::surface::SurfaceAttributesBuilder::default();
                 let sa = sab.build(
-                    rwh.unwrap(),
+                    rwh,
                     std::num::NonZeroU32::new(winitwindow.inner_size().width).unwrap(),
                     std::num::NonZeroU32::new(winitwindow.inner_size().height).unwrap(),
                 );
                 let ws = unsafe { display.create_window_surface(&config, &sa).unwrap() };
 
-                let attr = glutin::context::ContextAttributesBuilder::new().build(rwh);
+                let attr = glutin::context::ContextAttributesBuilder::new().build(Some(rwh));
 
                 let gl_window = unsafe { display.create_context(&config, &attr).unwrap() };
 
