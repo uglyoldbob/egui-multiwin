@@ -11,11 +11,10 @@
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=egui-multiwin",
-                    "--package=egui-multiwin"
+                    "--bin=multiwin-demo"
                 ],
                 "filter": {
-                    "name": "egui-multiwin",
+                    "name": "multiwin-demo",
                     "kind": "bin"
                 }
             },

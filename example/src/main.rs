@@ -11,9 +11,25 @@ pub struct AppCommon {
     clicks: u32,
 }
 
+impl egui_multiwin::multi_window::CommonEventHandler<AppCommon, u32> for AppCommon {
+    fn process_event(&mut self, event: u32) -> Vec<egui_multiwin::multi_window::NewWindowRequest<AppCommon>> {
+        let mut windows_to_create = vec![];
+        println!("Received an event {}", event);
+        match event {
+            42 => windows_to_create.push(windows::popup_window::PopupWindow::new("event popup".to_string())),
+            _ => {}
+        }
+        windows_to_create
+    }
+}
+
 fn main() {
     let event_loop = egui_multiwin::glutin::event_loop::EventLoopBuilder::with_user_event().build();
-    let mut multi_window = MultiWindow::new();
+    let proxy = event_loop.create_proxy();
+    if let Err(e) = proxy.send_event(42) {
+        println!("Failed to send event loop message: {:?}", e);
+    }
+    let mut multi_window: MultiWindow<AppCommon, u32> = MultiWindow::new();
     let root_window = root::RootWindow::new();
     let root_window2 = popup_window::PopupWindow::new("initial popup".to_string());
 

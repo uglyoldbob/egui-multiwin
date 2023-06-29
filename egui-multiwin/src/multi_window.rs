@@ -2,12 +2,16 @@ use glutin::event_loop::{ControlFlow, EventLoop};
 
 use crate::tracked_window::{DisplayCreationError, TrackedWindow, TrackedWindowContainer, TrackedWindowOptions};
 
-/// Manages multiple `TrackedWindow`s by forwarding events to them.
-pub struct MultiWindow<T> {
-    windows: Vec<Box<TrackedWindowContainer<T>>>,
+pub trait CommonEventHandler<T, U> {
+    fn process_event(&mut self, event: U) -> Vec<NewWindowRequest<T>>;
 }
 
-impl<T: 'static> MultiWindow<T> {
+/// Manages multiple `TrackedWindow`s by forwarding events to them.
+pub struct MultiWindow<T, U> {
+    windows: Vec<Box<TrackedWindowContainer<T, U>>>,
+}
+
+impl<T: 'static + CommonEventHandler<T, U>, U: 'static> MultiWindow<T, U> {
     /// Creates a new `MultiWindow`.
     pub fn new() -> Self {
         MultiWindow { windows: vec![] }
@@ -30,8 +34,8 @@ impl<T: 'static> MultiWindow<T> {
     pub fn do_window_events(
         &mut self,
         c: &mut T,
-        event: &glutin::event::Event<()>,
-        event_loop_window_target: &glutin::event_loop::EventLoopWindowTarget<()>,
+        event: &glutin::event::Event<U>,
+        event_loop_window_target: &glutin::event_loop::EventLoopWindowTarget<U>,
     ) -> Vec<ControlFlow> {
         let mut handled_windows = vec![];
         let mut window_control_flow = vec![];
@@ -78,11 +82,18 @@ impl<T: 'static> MultiWindow<T> {
     }
 
     /// Runs the event loop until all `TrackedWindow`s are closed.
-    pub fn run(mut self, event_loop: EventLoop<()>, mut c: T) {
+    pub fn run(mut self, event_loop: EventLoop<U>, mut c: T) {
         event_loop.run(move |event, event_loop_window_target, flow| {
             let c = &mut c;
             //println!("handling event {:?}", event);
-            let window_control_flow = self.do_window_events(c, &event, &event_loop_window_target);
+            let window_control_flow = if let glutin::event::Event::UserEvent(event) = event {
+                for w in c.process_event(event) {
+                    let _e = self.add(w, event_loop_window_target);
+                }
+                vec![ControlFlow::Poll]
+            } else {
+                self.do_window_events(c, &event, &event_loop_window_target)
+            };
 
             // If any window requested polling, we should poll.
             // Precedence: Poll > WaitUntil(smallest) > Wait.

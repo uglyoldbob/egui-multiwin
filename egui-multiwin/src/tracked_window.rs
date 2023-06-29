@@ -47,9 +47,9 @@ pub trait TrackedWindow {
 /// Handles one event from the event loop. Returns true if the window needs to be kept alive,
 /// otherwise it will be closed. Window events should be checked to ensure that their ID is one
 /// that the TrackedWindow is interested in.
-fn handle_event<COMMON>(
+fn handle_event<COMMON, U>(
     s: &mut dyn TrackedWindow<Data = COMMON>,
-    event: &glutin::event::Event<()>,
+    event: &glutin::event::Event<U>,
     c: &mut COMMON,
     egui: &mut EguiGlow,
     root_window_exists: bool,
@@ -121,7 +121,7 @@ fn handle_event<COMMON>(
                 control_flow = glutin::event_loop::ControlFlow::Exit;
             }
 
-            egui.on_event(event);
+            let _ = egui.on_event(event);
 
             gl_window.window().request_redraw(); // TODO: ask egui if the events warrants a repaint instead
             None
@@ -135,7 +135,6 @@ fn handle_event<COMMON>(
     };
 
     if !root_window_exists && !s.is_root() {
-        println!("Root window is gone, exiting popup.");
         control_flow = ControlFlow::Exit;
     }
 
@@ -154,20 +153,21 @@ pub struct TrackedWindowOptions {
     pub shader: Option<egui_glow::ShaderVersion>,
 }
 
-pub struct TrackedWindowContainer<T> {
+pub struct TrackedWindowContainer<T, U> {
     pub gl_window: IndeterminateWindowedContext,
     pub egui: Option<EguiGlow>,
     pub window: Box<dyn TrackedWindow<Data = T>>,
     pub shader: Option<egui_glow::ShaderVersion>,
+    _phantom: std::marker::PhantomData<U>,
 }
 
-impl<T> TrackedWindowContainer<T> {
+impl<T, U> TrackedWindowContainer<T, U> {
     pub fn create<TE>(
         window: Box<dyn TrackedWindow<Data = T>>,
         window_builder: glutin::window::WindowBuilder,
         event_loop: &glutin::event_loop::EventLoopWindowTarget<TE>,
         options: &TrackedWindowOptions,
-    ) -> Result<TrackedWindowContainer<T>, DisplayCreationError> {
+    ) -> Result<TrackedWindowContainer<T, U>, DisplayCreationError> {
         let gl_window = glutin::ContextBuilder::new()
             .with_depth_buffer(0)
             .with_srgb(true)
@@ -180,12 +180,16 @@ impl<T> TrackedWindowContainer<T> {
             gl_window: IndeterminateWindowedContext::NotCurrent(gl_window),
             egui: None,
             shader: options.shader,
+            _phantom: std::marker::PhantomData,
         })
     }
 
-    pub fn is_event_for_window(&self, event: &glutin::event::Event<()>) -> bool {
+    pub fn is_event_for_window(&self, event: &glutin::event::Event<U>) -> bool {
         // Check if the window ID matches, if not then this window can pass on the event.
         match (event, &self.gl_window) {
+            (Event::UserEvent(_), _) => {
+                false
+            }
             (
                 Event::WindowEvent {
                     window_id: id,
@@ -206,10 +210,10 @@ impl<T> TrackedWindowContainer<T> {
         }
     }
 
-    pub fn handle_event_outer<U>(
+    pub fn handle_event_outer(
         &mut self,
         c: &mut T,
-        event: &glutin::event::Event<()>,
+        event: &glutin::event::Event<U>,
         el: &EventLoopWindowTarget<U>,
         root_window_exists: bool,
     ) -> TrackedWindowControl<T> {
