@@ -103,7 +103,7 @@ pub trait TrackedWindow<T> {
     fn set_root(&mut self, _root: bool) {}
 
     /// Runs the redraw for the window. Return true to close the window.
-    fn redraw(&mut self, c: &mut T, egui: &mut EguiGlow) -> RedrawResponse<T>;
+    fn redraw(&mut self, c: &mut T, egui: &mut EguiGlow, window: &winit::window::Window) -> RedrawResponse<T>;
 
     fn opengl_before(
         &mut self,
@@ -138,7 +138,7 @@ fn handle_event<COMMON, U>(
         let ppp = input.pixels_per_point;
         egui.egui_ctx.begin_frame(input);
 
-        let rr = s.redraw(c, egui);
+        let rr = s.redraw(c, egui, &gl_window.window);
 
         let full_output = egui.egui_ctx.end_frame();
 

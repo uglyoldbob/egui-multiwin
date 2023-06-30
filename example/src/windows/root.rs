@@ -42,7 +42,7 @@ impl TrackedWindow<AppCommon> for RootWindow {
 
     fn set_root(&mut self, _root: bool) {}
 
-    fn redraw(&mut self, c: &mut AppCommon, egui: &mut EguiGlow) -> RedrawResponse<AppCommon> {
+    fn redraw(&mut self, c: &mut AppCommon, egui: &mut EguiGlow, _window: &egui_multiwin::winit::window::Window) -> RedrawResponse<AppCommon> {
         let mut quit = false;
 
         let mut windows_to_create = vec![];
