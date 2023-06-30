@@ -92,8 +92,7 @@ pub struct RedrawResponse<T> {
 
 /// A window being tracked by a `MultiWindow`. All tracked windows will be forwarded all events
 /// received on the `MultiWindow`'s event loop.
-pub trait TrackedWindow {
-    type Data;
+pub trait TrackedWindow<T> {
 
     /// Returns true if the window is a root window. Root windows will close all other windows when closed
     fn is_root(&self) -> bool {
@@ -104,17 +103,17 @@ pub trait TrackedWindow {
     fn set_root(&mut self, _root: bool) {}
 
     /// Runs the redraw for the window. Return true to close the window.
-    fn redraw(&mut self, c: &mut Self::Data, egui: &mut EguiGlow) -> RedrawResponse<Self::Data>;
+    fn redraw(&mut self, c: &mut T, egui: &mut EguiGlow) -> RedrawResponse<T>;
 
     fn opengl_before(
         &mut self,
-        _c: &mut Self::Data,
+        _c: &mut T,
         _gl_window: &mut ContextHolder<PossiblyCurrentContext>,
     ) {
     }
     fn opengl_after(
         &mut self,
-        _c: &mut Self::Data,
+        _c: &mut T,
         _gl_window: &mut ContextHolder<PossiblyCurrentContext>,
     ) {
     }
@@ -124,7 +123,7 @@ pub trait TrackedWindow {
 /// otherwise it will be closed. Window events should be checked to ensure that their ID is one
 /// that the TrackedWindow is interested in.
 fn handle_event<COMMON, U>(
-    s: &mut dyn TrackedWindow<Data = COMMON>,
+    s: &mut dyn TrackedWindow<COMMON>,
     event: &winit::event::Event<U>,
     c: &mut COMMON,
     egui: &mut EguiGlow,
@@ -234,14 +233,14 @@ pub struct TrackedWindowOptions {
 pub struct TrackedWindowContainer<T, U> {
     pub gl_window: IndeterminateWindowedContext,
     pub egui: Option<EguiGlow>,
-    pub window: Box<dyn TrackedWindow<Data = T>>,
+    pub window: Box<dyn TrackedWindow<T>>,
     pub shader: Option<egui_glow::ShaderVersion>,
     _phantom: std::marker::PhantomData<U>,
 }
 
 impl<T, U> TrackedWindowContainer<T, U> {
     pub fn create<TE>(
-        window: Box<dyn TrackedWindow<Data = T>>,
+        window: Box<dyn TrackedWindow<T>>,
         window_builder: winit::window::WindowBuilder,
         event_loop: &winit::event_loop::EventLoopWindowTarget<TE>,
         options: &TrackedWindowOptions,

@@ -140,13 +140,13 @@ impl<T: 'static + CommonEventHandler<T, U>, U: 'static> MultiWindow<T, U> {
 }
 
 pub struct NewWindowRequest<T> {
-    pub window_state: Box<dyn TrackedWindow<Data = T>>,
+    pub window_state: Box<dyn TrackedWindow<T>>,
     pub builder: winit::window::WindowBuilder,
     pub options: TrackedWindowOptions,
 }
 
 impl<T> NewWindowRequest<T> {
-    pub fn window(&mut self) -> &mut Box<dyn TrackedWindow<Data = T>> {
+    pub fn window(&mut self) -> &mut Box<dyn TrackedWindow<T>> {
         &mut self.window_state
     }
 }

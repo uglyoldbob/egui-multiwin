@@ -31,10 +31,9 @@ impl PopupWindow {
     }
 }
 
-impl TrackedWindow for PopupWindow {
-    type Data = AppCommon;
+impl TrackedWindow<AppCommon> for PopupWindow {
 
-    fn redraw(&mut self, c: &mut Self::Data, egui: &mut EguiGlow) -> RedrawResponse<Self::Data> {
+    fn redraw(&mut self, c: &mut AppCommon, egui: &mut EguiGlow) -> RedrawResponse<AppCommon> {
         let mut quit = false;
 
         egui_multiwin::egui::CentralPanel::default().show(&egui.egui_ctx, |ui| {

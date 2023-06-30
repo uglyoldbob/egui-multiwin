@@ -35,16 +35,14 @@ impl RootWindow {
     }
 }
 
-impl TrackedWindow for RootWindow {
-    type Data = AppCommon;
-
+impl TrackedWindow<AppCommon> for RootWindow {
     fn is_root(&self) -> bool {
         true
     }
 
     fn set_root(&mut self, _root: bool) {}
 
-    fn redraw(&mut self, c: &mut AppCommon, egui: &mut EguiGlow) -> RedrawResponse<Self::Data> {
+    fn redraw(&mut self, c: &mut AppCommon, egui: &mut EguiGlow) -> RedrawResponse<AppCommon> {
         let mut quit = false;
 
         let mut windows_to_create = vec![];
