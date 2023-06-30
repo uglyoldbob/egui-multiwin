@@ -20,17 +20,17 @@ impl RootWindow {
                 button_press_count: 0,
                 num_popups_created: 0,
             }),
-            builder: egui_multiwin::glutin::window::WindowBuilder::new()
+            builder: egui_multiwin::winit::window::WindowBuilder::new()
                 .with_resizable(true)
-                .with_inner_size(egui_multiwin::glutin::dpi::LogicalSize {
+                .with_inner_size(egui_multiwin::winit::dpi::LogicalSize {
                     width: 800.0,
                     height: 600.0,
                 })
                 .with_title("egui-multiwin root window"),
             options: egui_multiwin::tracked_window::TrackedWindowOptions {
-                    vsync: false,
-                    shader: None,
-                },
+                vsync: false,
+                shader: None,
+            },
         }
     }
 }

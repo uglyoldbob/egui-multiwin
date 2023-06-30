@@ -24,7 +24,7 @@ impl egui_multiwin::multi_window::CommonEventHandler<AppCommon, u32> for AppComm
 }
 
 fn main() {
-    let event_loop = egui_multiwin::glutin::event_loop::EventLoopBuilder::with_user_event().build();
+    let event_loop = egui_multiwin::winit::event_loop::EventLoopBuilder::with_user_event().build();
     let proxy = event_loop.create_proxy();
     if let Err(e) = proxy.send_event(42) {
         println!("Failed to send event loop message: {:?}", e);
