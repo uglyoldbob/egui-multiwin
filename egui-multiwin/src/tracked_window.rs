@@ -44,6 +44,10 @@ impl<T> ContextHolder<T> {
 
 impl ContextHolder<PossiblyCurrentContext> {
     fn swap_buffers(&self) -> glutin::error::Result<()> {
+        #[cfg(target_os="linux")]
+        {
+            let _e = self.ws.set_swap_interval(&self.context, glutin::surface::SwapInterval::DontWait);
+        }
         self.ws.swap_buffers(&self.context)
     }
 
@@ -247,6 +251,8 @@ impl<T, U> TrackedWindowContainer<T, U> {
         let rwh = winitwindow.raw_window_handle();
         #[cfg(target_os="windows")]
         let pref = glutin::display::DisplayApiPreference::Wgl(Some(rwh));
+        #[cfg(target_os="linux")]
+        let pref = glutin::display::DisplayApiPreference::Egl;
         let display = unsafe { glutin::display::Display::new(rdh, pref) };
             if let Ok(display) = display {
             let configt = glutin::config::ConfigTemplateBuilder::default().build();
