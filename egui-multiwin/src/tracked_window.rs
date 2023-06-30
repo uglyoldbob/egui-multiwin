@@ -253,6 +253,8 @@ impl<T, U> TrackedWindowContainer<T, U> {
         let pref = glutin::display::DisplayApiPreference::Wgl(Some(rwh));
         #[cfg(target_os="linux")]
         let pref = glutin::display::DisplayApiPreference::Egl;
+        #[cfg(target_os="macos")]
+        let pref = glutin::display::DisplayApiPreference::Cgl;
         let display = unsafe { glutin::display::Display::new(rdh, pref) };
             if let Ok(display) = display {
             let configt = glutin::config::ConfigTemplateBuilder::default().build();
