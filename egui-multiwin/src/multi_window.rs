@@ -1,16 +1,28 @@
+//! This defines the MultiWindow struct. This is the main struct used in the main function of a user application.
+
 use winit::event_loop::{ControlFlow, EventLoop};
 
 use crate::tracked_window::{
     DisplayCreationError, TrackedWindow, TrackedWindowContainer, TrackedWindowOptions,
 };
 
+/// This trait allows for non-window specific events to be sent to the event loop.
+/// It allows for non-gui threads or code to interact with the gui through the common struct
 pub trait CommonEventHandler<T, U> {
+    /// Process non-window specific events for the application
     fn process_event(&mut self, event: U) -> Vec<NewWindowRequest<T>>;
 }
 
-/// Manages multiple `TrackedWindow`s by forwarding events to them.
+/// The main struct of the crate. Manages multiple `TrackedWindow`s by forwarding events to them.
 pub struct MultiWindow<T, U> {
-    windows: Vec<Box<TrackedWindowContainer<T, U>>>,
+    /// The windows for the application.
+    windows: Vec<TrackedWindowContainer<T, U>>,
+}
+
+impl<T: 'static + CommonEventHandler<T, U>, U: 'static> Default for MultiWindow<T, U> {
+     fn default() -> Self {
+         Self::new()
+     }
 }
 
 impl<T: 'static + CommonEventHandler<T, U>, U: 'static> MultiWindow<T, U> {
@@ -25,16 +37,18 @@ impl<T: 'static + CommonEventHandler<T, U>, U: 'static> MultiWindow<T, U> {
         window: NewWindowRequest<T>,
         event_loop: &winit::event_loop::EventLoopWindowTarget<TE>,
     ) -> Result<(), DisplayCreationError> {
-        Ok(self
+        self
             .windows
-            .push(Box::new(TrackedWindowContainer::create::<TE>(
+            .push(TrackedWindowContainer::create::<TE>(
                 window.window_state,
                 window.builder,
-                &event_loop,
+                event_loop,
                 &window.options,
-            )?)))
+            )?);
+        Ok(())
     }
 
+    /// Process the given event for the applicable window(s)
     pub fn do_window_events(
         &mut self,
         c: &mut T,
@@ -46,7 +60,7 @@ impl<T: 'static + CommonEventHandler<T, U>, U: 'static> MultiWindow<T, U> {
 
         let mut root_window_exists = false;
         for other in &self.windows {
-            if (*other).window.is_root() {
+            if other.window.is_root() {
                 root_window_exists = true;
             }
         }
@@ -55,15 +69,20 @@ impl<T: 'static + CommonEventHandler<T, U>, U: 'static> MultiWindow<T, U> {
             if window.is_event_for_window(event) {
                 let window_control = window.handle_event_outer(
                     c,
-                    &event,
+                    event,
                     event_loop_window_target,
                     root_window_exists,
                 );
                 match window_control.requested_control_flow {
                     ControlFlow::Exit => {
                         //println!("window requested exit. Instead of sending the exit for everyone, just get rid of this one.");
-                        window_control_flow.push(ControlFlow::Exit);
-                        continue;
+                        if window.window.can_quit(c) {
+                            window_control_flow.push(ControlFlow::Exit);
+                            continue;
+                        }
+                        else {
+                            window_control_flow.push(ControlFlow::Wait);
+                        }
                         //*flow = ControlFlow::Exit
                     }
                     requested_flow => {
@@ -96,7 +115,7 @@ impl<T: 'static + CommonEventHandler<T, U>, U: 'static> MultiWindow<T, U> {
                 }
                 vec![ControlFlow::Poll]
             } else {
-                self.do_window_events(c, &event, &event_loop_window_target)
+                self.do_window_events(c, &event, event_loop_window_target)
             };
 
             // If any window requested polling, we should poll.
@@ -139,14 +158,13 @@ impl<T: 'static + CommonEventHandler<T, U>, U: 'static> MultiWindow<T, U> {
     }
 }
 
+/// A struct defining how a new window is to be created.
 pub struct NewWindowRequest<T> {
+    /// The actual struct containing window data. The struct must implement the TrackedWindow<T> trait.
     pub window_state: Box<dyn TrackedWindow<T>>,
+    /// Specifies how to build the window with a WindowBuilder
     pub builder: winit::window::WindowBuilder,
+    /// Other options for the window.
     pub options: TrackedWindowOptions,
 }
 
-impl<T> NewWindowRequest<T> {
-    pub fn window(&mut self) -> &mut Box<dyn TrackedWindow<T>> {
-        &mut self.window_state
-    }
-}

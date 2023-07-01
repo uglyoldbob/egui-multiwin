@@ -16,7 +16,8 @@ impl egui_multiwin::multi_window::CommonEventHandler<AppCommon, u32> for AppComm
         let mut windows_to_create = vec![];
         println!("Received an event {}", event);
         match event {
-            42 => windows_to_create.push(windows::popup_window::PopupWindow::new("event popup".to_string())),
+            42 => windows_to_create.push(windows::popup_window::PopupWindow::request("event popup".to_string())),
+            43 => windows_to_create.push(windows::root::RootWindow::request()),
             _ => {}
         }
         windows_to_create
@@ -30,8 +31,8 @@ fn main() {
         println!("Failed to send event loop message: {:?}", e);
     }
     let mut multi_window: MultiWindow<AppCommon, u32> = MultiWindow::new();
-    let root_window = root::RootWindow::new();
-    let root_window2 = popup_window::PopupWindow::new("initial popup".to_string());
+    let root_window = root::RootWindow::request();
+    let root_window2 = popup_window::PopupWindow::request("initial popup".to_string());
 
     let ac = AppCommon { clicks: 0 };
 

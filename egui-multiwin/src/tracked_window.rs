@@ -1,3 +1,5 @@
+//! This module covers definition and functionality for an individual window.
+
 use std::num::NonZeroU32;
 use std::{mem, sync::Arc};
 
@@ -19,14 +21,20 @@ use winit::{
     event_loop::{ControlFlow, EventLoopWindowTarget},
 };
 
+/// A holder of context and related items
 pub struct ContextHolder<T> {
+    /// The context being held
     context: T,
+    /// The window
     window: winit::window::Window,
+    /// The window surface
     ws: glutin::surface::Surface<WindowSurface>,
+    /// The display
     display: glutin::display::Display,
 }
 
 impl<T> ContextHolder<T> {
+    /// Create a new context holder
     fn new(
         context: T,
         window: winit::window::Window,
@@ -43,6 +51,7 @@ impl<T> ContextHolder<T> {
 }
 
 impl ContextHolder<PossiblyCurrentContext> {
+    /// Call swap_buffers. linux targets have vsync specifically disabled because it causes problems with hidden windows.
     fn swap_buffers(&self) -> glutin::error::Result<()> {
         #[cfg(target_os="linux")]
         {
@@ -51,6 +60,7 @@ impl ContextHolder<PossiblyCurrentContext> {
         self.ws.swap_buffers(&self.context)
     }
 
+    /// Resize the window to the specified size. The size cannot be zero in either dimension.
     fn resize(&self, size: winit::dpi::PhysicalSize<u32>) {
         let w = size.width;
         let h = size.height;
@@ -61,10 +71,12 @@ impl ContextHolder<PossiblyCurrentContext> {
         )
     }
 
+    /// Make a possibly current context current
     fn make_current(&self) -> glutin::error::Result<()> {
         self.context.make_current(&self.ws)
     }
 
+    /// convenience function to call get_proc_address on the display of this struct
     fn get_proc_address(&self, s: &str) -> *const std::ffi::c_void {
         let cs: *const std::ffi::c_char = s.as_ptr().cast();
         let cst = unsafe { std::ffi::CStr::from_ptr(cs) };
@@ -73,6 +85,7 @@ impl ContextHolder<PossiblyCurrentContext> {
 }
 
 impl ContextHolder<NotCurrentContext> {
+    /// Transforms a not current context into a possibly current context
     fn make_current(self) -> Result<ContextHolder<PossiblyCurrentContext>, glutin::error::Error> {
         let c = self.context.make_current(&self.ws).unwrap();
         let s = ContextHolder::<PossiblyCurrentContext> {
@@ -85,8 +98,11 @@ impl ContextHolder<NotCurrentContext> {
     }
 }
 
+/// The return value of the redraw function of trait TrackedWindow<T>
 pub struct RedrawResponse<T> {
+    /// Should the window exit?
     pub quit: bool,
+    /// A list of windows that the window desires to have created.
     pub new_windows: Vec<NewWindowRequest<T>>,
 }
 
@@ -94,27 +110,40 @@ pub struct RedrawResponse<T> {
 /// received on the `MultiWindow`'s event loop.
 pub trait TrackedWindow<T> {
 
-    /// Returns true if the window is a root window. Root windows will close all other windows when closed
+    /// Returns true if the window is a root window. Root windows will close all other windows when closed. Windows are not root windows by default.
+    /// It is completely valid to have more than one root window open at the same time. The program will exit when all root windows are closed.
     fn is_root(&self) -> bool {
         false
     }
 
-    /// Sets whether or not the window is a root window.
+    /// Returns true when the window is allowed to close. Default is windows are always allowed to close. Override to change this behavior.
+    fn can_quit(&self, _c: &mut T ) -> bool {
+        true
+    }
+
+    /// Sets whether or not the window is a root window. Does nothing by default
     fn set_root(&mut self, _root: bool) {}
 
-    /// Runs the redraw for the window. Return true to close the window.
+    /// Runs the redraw for the window. See RedrawResponse for the return value.
     fn redraw(&mut self, c: &mut T, egui: &mut EguiGlow, window: &winit::window::Window) -> RedrawResponse<T>;
-
-    fn opengl_before(
+    /// Allows opengl rendering to be done underneath all of the egui stuff of the window
+    /// # Safety
+    /// 
+    /// opengl functions are unsafe. This function would require calling opengl functions.
+    unsafe fn opengl_before(
         &mut self,
         _c: &mut T,
-        _gl_window: &mut ContextHolder<PossiblyCurrentContext>,
+        _gl: &Arc<egui_glow::painter::Context>,
     ) {
     }
-    fn opengl_after(
+    /// Allows opengl rendering to be done on top of all of the egui stuff of the window
+    /// # Safety
+    /// 
+    /// opengl functions are unsafe. This function would require calling opengl functions.
+    unsafe fn opengl_after(
         &mut self,
         _c: &mut T,
-        _gl_window: &mut ContextHolder<PossiblyCurrentContext>,
+        _gl: &Arc<egui_glow::painter::Context>,
     ) {
     }
 }
@@ -162,7 +191,7 @@ fn handle_event<COMMON, U>(
             }
 
             // draw things behind egui here
-            s.opengl_before(c, gl_window);
+            unsafe { s.opengl_before(c, egui.painter.gl()) };
 
             let prim = egui.egui_ctx.tessellate(full_output.shapes);
             egui.painter.paint_and_update_textures(
@@ -173,7 +202,7 @@ fn handle_event<COMMON, U>(
             );
 
             // draw things on top of egui here
-            s.opengl_after(c, gl_window);
+            unsafe { s.opengl_after(c, egui.painter.gl()) };
 
             gl_window.swap_buffers().unwrap();
         }
@@ -225,20 +254,30 @@ fn handle_event<COMMON, U>(
     }
 }
 
+/// The options for a window.
 pub struct TrackedWindowOptions {
+    /// Should the window be vsynced. Check github issues to see if this property actually does what it is supposed to.
     pub vsync: bool,
+    /// Optionally sets the shader version for the window.
     pub shader: Option<egui_glow::ShaderVersion>,
 }
 
+/// The main container for a window. Contains all required data for operating and maintaining a window.
 pub struct TrackedWindowContainer<T, U> {
+    /// The context for the window
     pub gl_window: IndeterminateWindowedContext,
+    /// The egui instance for this window, each window has a separate egui instance.
     pub egui: Option<EguiGlow>,
+    /// The actual window
     pub window: Box<dyn TrackedWindow<T>>,
+    /// The optional shader version for the window
     pub shader: Option<egui_glow::ShaderVersion>,
+    /// Nothing, indicates that the type U is to be treated as if it exists.
     _phantom: std::marker::PhantomData<U>,
 }
 
 impl<T, U> TrackedWindowContainer<T, U> {
+    /// Create a new window.
     pub fn create<TE>(
         window: Box<dyn TrackedWindow<T>>,
         window_builder: winit::window::WindowBuilder,
@@ -246,7 +285,7 @@ impl<T, U> TrackedWindowContainer<T, U> {
         options: &TrackedWindowOptions,
     ) -> Result<TrackedWindowContainer<T, U>, DisplayCreationError> {
         let rdh = event_loop.raw_display_handle();
-        let winitwindow = window_builder.build(&event_loop).unwrap();
+        let winitwindow = window_builder.build(event_loop).unwrap();
         let rwh = winitwindow.raw_window_handle();
         #[cfg(target_os="windows")]
         let pref = glutin::display::DisplayApiPreference::Wgl(Some(rwh));
@@ -291,6 +330,7 @@ impl<T, U> TrackedWindowContainer<T, U> {
         panic!("No window created");
     }
 
+    /// Returns true if the specified event is for this window. A UserEvent (one generated by the EventLoopProxy) is not for any window.
     pub fn is_event_for_window(&self, event: &winit::event::Event<U>) -> bool {
         // Check if the window ID matches, if not then this window can pass on the event.
         match (event, &self.gl_window) {
@@ -317,6 +357,7 @@ impl<T, U> TrackedWindowContainer<T, U> {
         }
     }
 
+    /// The outer event handler for a window. Responsible for activating the context, creating the egui context if required, and calling handle_event.
     pub fn handle_event_outer(
         &mut self,
         c: &mut T,
@@ -349,7 +390,7 @@ impl<T, U> TrackedWindowContainer<T, U> {
                     gl.enable(glow::FRAMEBUFFER_SRGB);
                 }
 
-                let egui = egui_glow::EguiGlow::new(&el, gl.clone(), self.shader);
+                let egui = egui_glow::EguiGlow::new(el, gl, self.shader);
                 self.egui = Some(egui);
             }
             Some(_) => (),
@@ -366,8 +407,10 @@ impl<T, U> TrackedWindowContainer<T, U> {
                     &mut gl_window,
                 );
                 if let ControlFlow::Exit = result.requested_control_flow {
-                    // This window wants to go away. Close it.
-                    egui.destroy();
+                    if self.window.can_quit(c) {
+                        // This window wants to go away. Close it.
+                        egui.destroy();
+                    }
                 };
                 result
             }
@@ -389,16 +432,24 @@ impl<T, U> TrackedWindowContainer<T, U> {
     }
 }
 
+/// Enum of the potential options for a window context
 pub enum IndeterminateWindowedContext {
+    /// The window context is possibly current
     PossiblyCurrent(ContextHolder<PossiblyCurrentContext>),
+    /// The window context is not current
     NotCurrent(ContextHolder<NotCurrentContext>),
+    /// The window context is empty
     None,
 }
 
+/// The eventual return struct of the TrackedWindow<T> trait update function. Used internally for window management. 
 pub struct TrackedWindowControl<T> {
+    /// Indicates how the window desires to respond to future events
     pub requested_control_flow: ControlFlow,
+    /// A list of windows to be created
     pub windows_to_create: Vec<NewWindowRequest<T>>,
 }
 
 #[derive(Error, Debug)]
+/// Enumerates the kinds of errors that display creation can have. 
 pub enum DisplayCreationError {}

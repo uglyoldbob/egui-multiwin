@@ -14,7 +14,7 @@ pub struct RootWindow {
 }
 
 impl RootWindow {
-    pub fn new() -> NewWindowRequest<AppCommon> {
+    pub fn request() -> NewWindowRequest<AppCommon> {
         NewWindowRequest {
             window_state: Box::new(RootWindow {
                 button_press_count: 0,
@@ -50,7 +50,7 @@ impl TrackedWindow<AppCommon> for RootWindow {
         egui_multiwin::egui::SidePanel::left("my_side_panel").show(&egui.egui_ctx, |ui| {
             ui.heading("Hello World!");
             if ui.button("New popup").clicked() {
-                windows_to_create.push(PopupWindow::new(format!(
+                windows_to_create.push(PopupWindow::request(format!(
                     "popup window #{}",
                     self.num_popups_created
                 )));
@@ -64,7 +64,7 @@ impl TrackedWindow<AppCommon> for RootWindow {
             ui.heading(format!("number {}", c.clicks));
         });
         RedrawResponse {
-            quit: quit,
+            quit,
             new_windows: windows_to_create,
         }
     }
