@@ -41,6 +41,17 @@ impl<T: 'static + CommonEventHandler<T, U>, U: 'static> MultiWindow<T, U> {
     /// Add a font that is applied to every window. Be sure to call this before calling [add](crate::multi_window::MultiWindow::add)
     /// multi_window is an instance of [MultiWindow<T,U>](crate::multi_window::MultiWindow<T,U>), DATA is a static `&[u8]` - most like defined with a `include_bytes!()` macro
     /// ```
+    /// use egui_multiwin::multi_window::NewWindowRequest;
+    /// struct Custom {}
+    /// 
+    /// impl egui_multiwin::multi_window::CommonEventHandler<Custom, u32> for Custom {
+    ///     fn process_event(&mut self, _event: u32)  -> Vec<NewWindowRequest<Custom>>{
+    ///         vec!()
+    ///     }
+    /// }
+    /// 
+    /// let mut multi_window: egui_multiwin::multi_window::MultiWindow<Custom, u32> = egui_multiwin::multi_window::MultiWindow::new();
+    /// let DATA = include_bytes!("cmunbtl.ttf");
     /// multi_window.add_font("my_font".to_string(), egui_multiwin::egui::FontData::from_static(DATA));
     /// ```
     pub fn add_font(&mut self, name: String, fd: egui::FontData) {

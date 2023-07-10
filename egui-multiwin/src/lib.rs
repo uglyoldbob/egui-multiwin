@@ -15,18 +15,64 @@
 //! `T` is the name of your struct, and `U` and the name of the message you want to pass as a non-window specific event.
 //!
 //! ```
+//! use egui_multiwin::multi_window::NewWindowRequest;
+//! use egui_multiwin::tracked_window::RedrawResponse;
+//! use egui_multiwin::tracked_window::TrackedWindow;
+//! use egui_glow::EguiGlow;
+//! 
 //! pub struct AppCommon {
 //!     clicks: u32,
 //! }
-//! ```
-//!
-//! ```
+//! 
+//! pub struct PopupWindow { }
+//! 
+//! impl PopupWindow {
+//!     pub fn request() -> NewWindowRequest<AppCommon> {
+//!        NewWindowRequest {
+//!            window_state: Box::new(PopupWindow {
+//!            }),
+//!            builder: egui_multiwin::winit::window::WindowBuilder::new()
+//!                .with_resizable(false)
+//!                .with_inner_size(egui_multiwin::winit::dpi::LogicalSize {
+//!                    width: 400.0,
+//!                    height: 200.0,
+//!                })
+//!                .with_title("A window"),
+//!            options: egui_multiwin::tracked_window::TrackedWindowOptions {
+//!                vsync: false,
+//!                shader: None,
+//!            },
+//!        }
+//!    }
+//! }
+//! 
+//! impl TrackedWindow<AppCommon> for PopupWindow {
+//!     fn is_root(&self) -> bool {
+//!         true
+//!     }
+//! 
+//!     fn redraw(
+//!         &mut self,
+//!         c: &mut AppCommon,
+//!         egui: &mut EguiGlow,
+//!         window: &egui_multiwin::winit::window::Window,
+//!         ) -> RedrawResponse<AppCommon> {
+//!         let quit = false;
+//!         todo!();
+//!         RedrawResponse {
+//!             quit,
+//!             new_windows: Vec::new(),
+//!         }
+//!     }
+//! }
+//! 
 //! impl egui_multiwin::multi_window::CommonEventHandler<AppCommon, u32> for AppCommon {
+//! 
 //!     fn process_event(&mut self, event: u32) -> Vec<egui_multiwin::multi_window::NewWindowRequest<AppCommon>> {
 //!         let mut windows_to_create = vec![];
 //!         println!("Received an event {}", event);
 //!         match event {
-//!             42 => windows_to_create.push(windows::popup_window::PopupWindow::new("event popup".to_string())),
+//!             42 => windows_to_create.push(PopupWindow::request()),
 //!             _ => {}
 //!         }
 //!         windows_to_create
