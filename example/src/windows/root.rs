@@ -1,3 +1,4 @@
+use egui_multiwin::egui::FontId;
 use egui_multiwin::egui_glow::EguiGlow;
 use egui_multiwin::{
     multi_window::NewWindowRequest,
@@ -42,7 +43,12 @@ impl TrackedWindow<AppCommon> for RootWindow {
 
     fn set_root(&mut self, _root: bool) {}
 
-    fn redraw(&mut self, c: &mut AppCommon, egui: &mut EguiGlow, _window: &egui_multiwin::winit::window::Window) -> RedrawResponse<AppCommon> {
+    fn redraw(
+        &mut self,
+        c: &mut AppCommon,
+        egui: &mut EguiGlow,
+        _window: &egui_multiwin::winit::window::Window,
+    ) -> RedrawResponse<AppCommon> {
         let mut quit = false;
 
         let mut windows_to_create = vec![];
@@ -62,6 +68,9 @@ impl TrackedWindow<AppCommon> for RootWindow {
         });
         egui_multiwin::egui::CentralPanel::default().show(&egui.egui_ctx, |ui| {
             ui.heading(format!("number {}", c.clicks));
+            let t = egui_multiwin::egui::widget_text::RichText::new("Example custom font text");
+            let t = t.font(FontId { size: 12.0, family: egui_multiwin::egui::FontFamily::Name("computermodern".into())});
+            ui.label(t);
         });
         RedrawResponse {
             quit,

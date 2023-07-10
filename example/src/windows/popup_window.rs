@@ -1,10 +1,10 @@
 //! This is an example of a popup window. It is likely very crude on the opengl_after function and could probably be optimized
+use egui_multiwin::egui_glow::glow;
 use egui_multiwin::egui_glow::EguiGlow;
 use egui_multiwin::{
     multi_window::NewWindowRequest,
     tracked_window::{RedrawResponse, TrackedWindow},
 };
-use egui_multiwin::egui_glow::glow;
 
 use crate::AppCommon;
 
@@ -34,12 +34,11 @@ impl PopupWindow {
 }
 
 impl TrackedWindow<AppCommon> for PopupWindow {
-
     unsafe fn opengl_after(
-            &mut self,
-            _c: &mut AppCommon,
-            gl: &std::sync::Arc<egui_multiwin::egui_glow::painter::Context>,
-        ) {
+        &mut self,
+        _c: &mut AppCommon,
+        gl: &std::sync::Arc<egui_multiwin::egui_glow::painter::Context>,
+    ) {
         use glow::HasContext;
         let shader_version = egui_multiwin::egui_glow::ShaderVersion::get(gl);
         let vertex_array = gl
@@ -75,7 +74,14 @@ impl TrackedWindow<AppCommon> for PopupWindow {
             let shader = gl
                 .create_shader(*shader_type)
                 .expect("Cannot create shader");
-            gl.shader_source(shader, &format!("{}\n{}", shader_version.version_declaration(), shader_source));
+            gl.shader_source(
+                shader,
+                &format!(
+                    "{}\n{}",
+                    shader_version.version_declaration(),
+                    shader_source
+                ),
+            );
             gl.compile_shader(shader);
             if !gl.get_shader_compile_status(shader) {
                 panic!("{}", gl.get_shader_info_log(shader));
@@ -98,11 +104,16 @@ impl TrackedWindow<AppCommon> for PopupWindow {
         gl.draw_arrays(glow::TRIANGLES, 0, 3);
     }
 
-    fn can_quit(&self, c: &mut AppCommon ) -> bool {
+    fn can_quit(&self, c: &mut AppCommon) -> bool {
         (c.clicks & 1) == 0
     }
 
-    fn redraw(&mut self, c: &mut AppCommon, egui: &mut EguiGlow, window: &egui_multiwin::winit::window::Window) -> RedrawResponse<AppCommon> {
+    fn redraw(
+        &mut self,
+        c: &mut AppCommon,
+        egui: &mut EguiGlow,
+        window: &egui_multiwin::winit::window::Window,
+    ) -> RedrawResponse<AppCommon> {
         let mut quit = false;
 
         egui_multiwin::egui::CentralPanel::default().show(&egui.egui_ctx, |ui| {

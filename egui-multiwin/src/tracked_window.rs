@@ -1,5 +1,6 @@
 //! This module covers definition and functionality for an individual window.
 
+use std::collections::HashMap;
 use std::num::NonZeroU32;
 use std::{mem, sync::Arc};
 
@@ -53,9 +54,11 @@ impl<T> ContextHolder<T> {
 impl ContextHolder<PossiblyCurrentContext> {
     /// Call swap_buffers. linux targets have vsync specifically disabled because it causes problems with hidden windows.
     fn swap_buffers(&self) -> glutin::error::Result<()> {
-        #[cfg(target_os="linux")]
+        #[cfg(target_os = "linux")]
         {
-            let _e = self.ws.set_swap_interval(&self.context, glutin::surface::SwapInterval::DontWait);
+            let _e = self
+                .ws
+                .set_swap_interval(&self.context, glutin::surface::SwapInterval::DontWait);
         }
         self.ws.swap_buffers(&self.context)
     }
@@ -98,7 +101,7 @@ impl ContextHolder<NotCurrentContext> {
     }
 }
 
-/// The return value of the redraw function of trait TrackedWindow<T>
+/// The return value of the redraw function of trait `TrackedWindow<T>`
 pub struct RedrawResponse<T> {
     /// Should the window exit?
     pub quit: bool,
@@ -109,7 +112,6 @@ pub struct RedrawResponse<T> {
 /// A window being tracked by a `MultiWindow`. All tracked windows will be forwarded all events
 /// received on the `MultiWindow`'s event loop.
 pub trait TrackedWindow<T> {
-
     /// Returns true if the window is a root window. Root windows will close all other windows when closed. Windows are not root windows by default.
     /// It is completely valid to have more than one root window open at the same time. The program will exit when all root windows are closed.
     fn is_root(&self) -> bool {
@@ -117,7 +119,7 @@ pub trait TrackedWindow<T> {
     }
 
     /// Returns true when the window is allowed to close. Default is windows are always allowed to close. Override to change this behavior.
-    fn can_quit(&self, _c: &mut T ) -> bool {
+    fn can_quit(&self, _c: &mut T) -> bool {
         true
     }
 
@@ -125,27 +127,22 @@ pub trait TrackedWindow<T> {
     fn set_root(&mut self, _root: bool) {}
 
     /// Runs the redraw for the window. See RedrawResponse for the return value.
-    fn redraw(&mut self, c: &mut T, egui: &mut EguiGlow, window: &winit::window::Window) -> RedrawResponse<T>;
+    fn redraw(
+        &mut self,
+        c: &mut T,
+        egui: &mut EguiGlow,
+        window: &winit::window::Window,
+    ) -> RedrawResponse<T>;
     /// Allows opengl rendering to be done underneath all of the egui stuff of the window
     /// # Safety
-    /// 
+    ///
     /// opengl functions are unsafe. This function would require calling opengl functions.
-    unsafe fn opengl_before(
-        &mut self,
-        _c: &mut T,
-        _gl: &Arc<egui_glow::painter::Context>,
-    ) {
-    }
+    unsafe fn opengl_before(&mut self, _c: &mut T, _gl: &Arc<egui_glow::painter::Context>) {}
     /// Allows opengl rendering to be done on top of all of the egui stuff of the window
     /// # Safety
-    /// 
+    ///
     /// opengl functions are unsafe. This function would require calling opengl functions.
-    unsafe fn opengl_after(
-        &mut self,
-        _c: &mut T,
-        _gl: &Arc<egui_glow::painter::Context>,
-    ) {
-    }
+    unsafe fn opengl_after(&mut self, _c: &mut T, _gl: &Arc<egui_glow::painter::Context>) {}
 }
 
 /// Handles one event from the event loop. Returns true if the window needs to be kept alive,
@@ -287,14 +284,14 @@ impl<T, U> TrackedWindowContainer<T, U> {
         let rdh = event_loop.raw_display_handle();
         let winitwindow = window_builder.build(event_loop).unwrap();
         let rwh = winitwindow.raw_window_handle();
-        #[cfg(target_os="windows")]
+        #[cfg(target_os = "windows")]
         let pref = glutin::display::DisplayApiPreference::Wgl(Some(rwh));
-        #[cfg(target_os="linux")]
+        #[cfg(target_os = "linux")]
         let pref = glutin::display::DisplayApiPreference::Egl;
-        #[cfg(target_os="macos")]
+        #[cfg(target_os = "macos")]
         let pref = glutin::display::DisplayApiPreference::Cgl;
         let display = unsafe { glutin::display::Display::new(rdh, pref) };
-            if let Ok(display) = display {
+        if let Ok(display) = display {
             let configt = glutin::config::ConfigTemplateBuilder::default().build();
             let config = unsafe { display.find_configs(configt) }
                 .unwrap()
@@ -319,8 +316,14 @@ impl<T, U> TrackedWindowContainer<T, U> {
 
                 let gl_window = unsafe { display.create_context(&config, &attr).unwrap() };
 
-                return Ok(TrackedWindowContainer {window,
-                    gl_window: IndeterminateWindowedContext::NotCurrent(ContextHolder::new(gl_window, winitwindow, ws, display)),
+                return Ok(TrackedWindowContainer {
+                    window,
+                    gl_window: IndeterminateWindowedContext::NotCurrent(ContextHolder::new(
+                        gl_window,
+                        winitwindow,
+                        ws,
+                        display,
+                    )),
                     egui: None,
                     shader: options.shader,
                     _phantom: std::marker::PhantomData,
@@ -334,9 +337,7 @@ impl<T, U> TrackedWindowContainer<T, U> {
     pub fn is_event_for_window(&self, event: &winit::event::Event<U>) -> bool {
         // Check if the window ID matches, if not then this window can pass on the event.
         match (event, &self.gl_window) {
-            (Event::UserEvent(_), _) => {
-                false
-            }
+            (Event::UserEvent(_), _) => false,
             (
                 Event::WindowEvent {
                     window_id: id,
@@ -364,6 +365,7 @@ impl<T, U> TrackedWindowContainer<T, U> {
         event: &winit::event::Event<U>,
         el: &EventLoopWindowTarget<U>,
         root_window_exists: bool,
+        fontmap: &HashMap<String, egui::FontData>,
     ) -> TrackedWindowControl<T> {
         // Activate this gl_window so we can use it.
         // We cannot activate it without full ownership, so temporarily move the gl_window into the current scope.
@@ -373,8 +375,8 @@ impl<T, U> TrackedWindowContainer<T, U> {
             IndeterminateWindowedContext::PossiblyCurrent(w) => {
                 w.make_current().unwrap();
                 w
-            },
-            IndeterminateWindowedContext::NotCurrent(w) => { w.make_current().unwrap() },
+            }
+            IndeterminateWindowedContext::NotCurrent(w) => w.make_current().unwrap(),
             IndeterminateWindowedContext::None => panic!("there's no window context???"),
         };
 
@@ -391,6 +393,14 @@ impl<T, U> TrackedWindowContainer<T, U> {
                 }
 
                 let egui = egui_glow::EguiGlow::new(el, gl, self.shader);
+                {
+                    let mut fonts = egui::FontDefinitions::default();
+                    for (name, font) in fontmap {
+                        fonts.font_data.insert(name.clone(), font.clone());
+                        fonts.families.insert(egui::FontFamily::Name(name.to_owned().into()), vec!(name.to_owned()));
+                    }
+                    egui.egui_ctx.set_fonts(fonts)
+                }
                 self.egui = Some(egui);
             }
             Some(_) => (),
@@ -442,7 +452,7 @@ pub enum IndeterminateWindowedContext {
     None,
 }
 
-/// The eventual return struct of the TrackedWindow<T> trait update function. Used internally for window management. 
+/// The eventual return struct of the `TrackedWindow<T>` trait update function. Used internally for window management.
 pub struct TrackedWindowControl<T> {
     /// Indicates how the window desires to respond to future events
     pub requested_control_flow: ControlFlow,
@@ -451,5 +461,5 @@ pub struct TrackedWindowControl<T> {
 }
 
 #[derive(Error, Debug)]
-/// Enumerates the kinds of errors that display creation can have. 
+/// Enumerates the kinds of errors that display creation can have.
 pub enum DisplayCreationError {}

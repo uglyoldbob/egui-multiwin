@@ -1,5 +1,7 @@
 //! This defines the MultiWindow struct. This is the main struct used in the main function of a user application.
 
+use std::collections::HashMap;
+
 use winit::event_loop::{ControlFlow, EventLoop};
 
 use crate::tracked_window::{
@@ -17,34 +19,46 @@ pub trait CommonEventHandler<T, U> {
 pub struct MultiWindow<T, U> {
     /// The windows for the application.
     windows: Vec<TrackedWindowContainer<T, U>>,
+    /// A list of fonts to install on every egui instance
+    fonts: HashMap<String, egui::FontData>,
 }
 
 impl<T: 'static + CommonEventHandler<T, U>, U: 'static> Default for MultiWindow<T, U> {
-     fn default() -> Self {
-         Self::new()
-     }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl<T: 'static + CommonEventHandler<T, U>, U: 'static> MultiWindow<T, U> {
     /// Creates a new `MultiWindow`.
     pub fn new() -> Self {
-        MultiWindow { windows: vec![] }
+        MultiWindow {
+            windows: vec![],
+            fonts: HashMap::new(),
+        }
     }
 
-    /// Adds a new `TrackedWindow` to the `MultiWindow`.
+    /// Add a font that is applied to every window. Be sure to call this before calling [add](crate::multi_window::MultiWindow::add)
+    /// multi_window is an instance of [MultiWindow<T,U>](crate::multi_window::MultiWindow<T,U>), DATA is a static `&[u8]` - most like defined with a `include_bytes!()` macro
+    /// ```
+    /// multi_window.add_font("my_font".to_string(), egui_multiwin::egui::FontData::from_static(DATA));
+    /// ```
+    pub fn add_font(&mut self, name: String, fd: egui::FontData) {
+        self.fonts.insert(name, fd);
+    }
+
+    /// Adds a new `TrackedWindow` to the `MultiWindow`. If custom fonts are desired, call [add_font](crate::multi_window::MultiWindow::add_font) first.
     pub fn add<TE>(
         &mut self,
         window: NewWindowRequest<T>,
         event_loop: &winit::event_loop::EventLoopWindowTarget<TE>,
     ) -> Result<(), DisplayCreationError> {
-        self
-            .windows
-            .push(TrackedWindowContainer::create::<TE>(
-                window.window_state,
-                window.builder,
-                event_loop,
-                &window.options,
-            )?);
+        self.windows.push(TrackedWindowContainer::create::<TE>(
+            window.window_state,
+            window.builder,
+            event_loop,
+            &window.options,
+        )?);
         Ok(())
     }
 
@@ -72,6 +86,7 @@ impl<T: 'static + CommonEventHandler<T, U>, U: 'static> MultiWindow<T, U> {
                     event,
                     event_loop_window_target,
                     root_window_exists,
+                    &self.fonts,
                 );
                 match window_control.requested_control_flow {
                     ControlFlow::Exit => {
@@ -79,8 +94,7 @@ impl<T: 'static + CommonEventHandler<T, U>, U: 'static> MultiWindow<T, U> {
                         if window.window.can_quit(c) {
                             window_control_flow.push(ControlFlow::Exit);
                             continue;
-                        }
-                        else {
+                        } else {
                             window_control_flow.push(ControlFlow::Wait);
                         }
                         //*flow = ControlFlow::Exit
@@ -160,11 +174,10 @@ impl<T: 'static + CommonEventHandler<T, U>, U: 'static> MultiWindow<T, U> {
 
 /// A struct defining how a new window is to be created.
 pub struct NewWindowRequest<T> {
-    /// The actual struct containing window data. The struct must implement the TrackedWindow<T> trait.
+    /// The actual struct containing window data. The struct must implement the `TrackedWindow<T>` trait.
     pub window_state: Box<dyn TrackedWindow<T>>,
     /// Specifies how to build the window with a WindowBuilder
     pub builder: winit::window::WindowBuilder,
     /// Other options for the window.
     pub options: TrackedWindowOptions,
 }
-
