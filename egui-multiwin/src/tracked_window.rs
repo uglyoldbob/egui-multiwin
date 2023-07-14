@@ -124,7 +124,7 @@ pub trait TrackedWindow<T> {
     }
 
     /// Lets the window know that it should close
-    fn close_requested(&mut self){}
+    fn close_requested(&mut self, c: &mut T){}
 
     /// Sets whether or not the window is a root window. Does nothing by default
     fn set_root(&mut self, _root: bool) {}
@@ -222,7 +222,7 @@ fn handle_event<COMMON, U>(
             }
 
             if let winit::event::WindowEvent::CloseRequested = event {
-                s.close_requested();
+                s.close_requested(c);
                 control_flow = winit::event_loop::ControlFlow::Exit;
             }
 
