@@ -123,7 +123,8 @@ pub trait TrackedWindow<T> {
         true
     }
 
-    fn close_requested();
+    /// Lets the window know that it should close
+    fn close_requested(&mut self){}
 
     /// Sets whether or not the window is a root window. Does nothing by default
     fn set_root(&mut self, _root: bool) {}
