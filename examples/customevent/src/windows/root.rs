@@ -5,7 +5,7 @@ use egui_multiwin::{
     tracked_window::{RedrawResponse, TrackedWindow},
 };
 
-use crate::AppCommon;
+use crate::{AppCommon, CustomEvent};
 
 use super::popup_window::PopupWindow;
 
@@ -15,7 +15,7 @@ pub struct RootWindow {
 }
 
 impl RootWindow {
-    pub fn request() -> NewWindowRequest<AppCommon> {
+    pub fn request() -> NewWindowRequest<AppCommon, CustomEvent> {
         NewWindowRequest {
             window_state: Box::new(RootWindow {
                 button_press_count: 0,
@@ -32,13 +32,28 @@ impl RootWindow {
                 vsync: false,
                 shader: None,
             },
+            id: egui_multiwin::multi_window::new_id(),
         }
     }
 }
 
-impl TrackedWindow<AppCommon> for RootWindow {
+impl TrackedWindow<AppCommon, CustomEvent> for RootWindow {
     fn is_root(&self) -> bool {
         true
+    }
+
+    fn custom_event(
+        &mut self,
+        event: &CustomEvent,
+        _c: &mut AppCommon,
+        _egui: &mut EguiGlow,
+        _window: &egui_multiwin::winit::window::Window,
+    ) -> RedrawResponse<AppCommon, CustomEvent> {
+        println!("Main window received an event {}", event.message);
+        RedrawResponse {
+            quit: false,
+            new_windows: vec![],
+        }
     }
 
     fn set_root(&mut self, _root: bool) {}
@@ -48,7 +63,7 @@ impl TrackedWindow<AppCommon> for RootWindow {
         c: &mut AppCommon,
         egui: &mut EguiGlow,
         _window: &egui_multiwin::winit::window::Window,
-    ) -> RedrawResponse<AppCommon> {
+    ) -> RedrawResponse<AppCommon, CustomEvent> {
         let mut quit = false;
 
         let mut windows_to_create = vec![];
@@ -56,10 +71,9 @@ impl TrackedWindow<AppCommon> for RootWindow {
         egui_multiwin::egui::SidePanel::left("my_side_panel").show(&egui.egui_ctx, |ui| {
             ui.heading("Hello World!");
             if ui.button("New popup").clicked() {
-                windows_to_create.push(PopupWindow::request(format!(
-                    "popup window #{}",
-                    self.num_popups_created
-                )));
+                let r = PopupWindow::request(format!("popup window #{}", self.num_popups_created));
+                c.popup_windows.insert(r.id);
+                windows_to_create.push(r);
                 self.num_popups_created += 1;
             }
             if ui.button("Quit").clicked() {
@@ -69,8 +83,26 @@ impl TrackedWindow<AppCommon> for RootWindow {
         egui_multiwin::egui::CentralPanel::default().show(&egui.egui_ctx, |ui| {
             ui.heading(format!("number {}", c.clicks));
             let t = egui_multiwin::egui::widget_text::RichText::new("Example custom font text");
-            let t = t.font(FontId { size: 12.0, family: egui_multiwin::egui::FontFamily::Name("computermodern".into())});
+            let t = t.font(FontId {
+                size: 12.0,
+                family: egui_multiwin::egui::FontFamily::Name("computermodern".into()),
+            });
             ui.label(t);
+            for id in &c.popup_windows {
+                if let Some(wid) = egui_multiwin::multi_window::get_window_id(*id) {
+                    ui.label(format!("Popup window id {} has window id {:?}", id, wid));
+                    if ui.button("Send message").clicked() {
+                        if let Err(e) = c.sender.send_event(CustomEvent {
+                            window: Some(wid),
+                            message: 41,
+                        }) {
+                            println!("Failed to send message to popupwindow {:?}", e);
+                        }
+                    }
+                } else {
+                    ui.label(format!("Popup window id {}", id));
+                }
+            }
         });
         RedrawResponse {
             quit,
