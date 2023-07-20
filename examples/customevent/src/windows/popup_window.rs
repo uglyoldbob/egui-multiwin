@@ -7,16 +7,21 @@ use egui_multiwin::{
 };
 
 use crate::AppCommon;
-
+use crate::CustomEvent;
 pub struct PopupWindow {
+    clicks: u32,
     pub input: String,
+    id: u32,
 }
 
 impl PopupWindow {
-    pub fn request(label: String) -> NewWindowRequest<AppCommon> {
+    pub fn request(label: String) -> NewWindowRequest<AppCommon, CustomEvent> {
+        let id = egui_multiwin::multi_window::new_id();
         NewWindowRequest {
             window_state: Box::new(PopupWindow {
+                clicks: 0,
                 input: label.clone(),
+                id,
             }),
             builder: egui_multiwin::winit::window::WindowBuilder::new()
                 .with_resizable(false)
@@ -26,14 +31,15 @@ impl PopupWindow {
                 })
                 .with_title(label),
             options: egui_multiwin::tracked_window::TrackedWindowOptions {
-                vsync: false,
+                vsync: true,
                 shader: None,
             },
+            id,
         }
     }
 }
 
-impl TrackedWindow<AppCommon> for PopupWindow {
+impl TrackedWindow<AppCommon, CustomEvent> for PopupWindow {
     unsafe fn opengl_after(
         &mut self,
         _c: &mut AppCommon,
@@ -104,8 +110,25 @@ impl TrackedWindow<AppCommon> for PopupWindow {
         gl.draw_arrays(glow::TRIANGLES, 0, 3);
     }
 
-    fn can_quit(&mut self, c: &mut AppCommon) -> bool {
+    fn can_quit(&self, c: &mut AppCommon) -> bool {
         (c.clicks & 1) == 0
+    }
+
+    fn custom_event(
+        &mut self,
+        event: &CustomEvent,
+        _c: &mut AppCommon,
+        _egui: &mut EguiGlow,
+        _window: &egui_multiwin::winit::window::Window,
+    ) -> RedrawResponse<AppCommon, CustomEvent> {
+        println!(
+            "Popup window {} received an event {}",
+            self.id, event.message
+        );
+        RedrawResponse {
+            quit: false,
+            new_windows: vec![],
+        }
     }
 
     fn redraw(
@@ -113,14 +136,16 @@ impl TrackedWindow<AppCommon> for PopupWindow {
         c: &mut AppCommon,
         egui: &mut EguiGlow,
         window: &egui_multiwin::winit::window::Window,
-    ) -> RedrawResponse<AppCommon> {
+    ) -> RedrawResponse<AppCommon, CustomEvent> {
         let mut quit = false;
 
         egui_multiwin::egui::CentralPanel::default().show(&egui.egui_ctx, |ui| {
             if ui.button("Increment").clicked() {
                 c.clicks += 1;
+                self.clicks += 1;
                 window.set_title(&format!("Title update {}", c.clicks));
             }
+            ui.label(format!("I have been clicked {} times", self.clicks));
             let response = ui.add(egui_multiwin::egui::TextEdit::singleline(&mut self.input));
             if response.changed() {
                 // …

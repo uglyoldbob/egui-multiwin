@@ -1,35 +1,56 @@
 //! This defines the MultiWindow struct. This is the main struct used in the main function of a user application.
 
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Mutex};
 
-use winit::event_loop::{ControlFlow, EventLoop};
+use winit::{
+    event_loop::{ControlFlow, EventLoop},
+    window::WindowId,
+};
 
 use crate::tracked_window::{
     DisplayCreationError, TrackedWindow, TrackedWindowContainer, TrackedWindowOptions,
 };
 
+/// The default provided struct for custom events. This is used when custom events are not desired in the user program.
+pub struct DefaultCustomEvent {}
+
+impl EventTrait for DefaultCustomEvent {
+    fn window_id(&self) -> Option<WindowId> {
+        None
+    }
+}
+
 /// This trait allows for non-window specific events to be sent to the event loop.
 /// It allows for non-gui threads or code to interact with the gui through the common struct
-pub trait CommonEventHandler<T, U> {
+pub trait CommonEventHandler<T, U: EventTrait = DefaultCustomEvent> {
     /// Process non-window specific events for the application
-    fn process_event(&mut self, event: U) -> Vec<NewWindowRequest<T>>;
+    fn process_event(&mut self, _event: U) -> Vec<NewWindowRequest<T, U>> {
+        vec![]
+    }
+}
+
+/// This trait is to be implemented on custom window events
+pub trait EventTrait {
+    /// Returns a Some when the event is for a particular window, returns None when the event is not for a particular window
+    fn window_id(&self) -> Option<WindowId>;
 }
 
 /// The main struct of the crate. Manages multiple `TrackedWindow`s by forwarding events to them.
-pub struct MultiWindow<T, U> {
+/// `T` represents the common data struct for the user program. `U` is the type representing custom events.
+pub struct MultiWindow<T, U: EventTrait = DefaultCustomEvent> {
     /// The windows for the application.
     windows: Vec<TrackedWindowContainer<T, U>>,
     /// A list of fonts to install on every egui instance
     fonts: HashMap<String, egui::FontData>,
 }
 
-impl<T: 'static + CommonEventHandler<T, U>, U: 'static> Default for MultiWindow<T, U> {
+impl<T: 'static + CommonEventHandler<T, U>, U: EventTrait + 'static> Default for MultiWindow<T, U> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<T: 'static + CommonEventHandler<T, U>, U: 'static> MultiWindow<T, U> {
+impl<T: 'static + CommonEventHandler<T, U>, U: EventTrait + 'static> MultiWindow<T, U> {
     /// Creates a new `MultiWindow`.
     pub fn new() -> Self {
         MultiWindow {
@@ -61,15 +82,22 @@ impl<T: 'static + CommonEventHandler<T, U>, U: 'static> MultiWindow<T, U> {
     /// Adds a new `TrackedWindow` to the `MultiWindow`. If custom fonts are desired, call [add_font](crate::multi_window::MultiWindow::add_font) first.
     pub fn add<TE>(
         &mut self,
-        window: NewWindowRequest<T>,
+        window: NewWindowRequest<T, U>,
+        c: &mut T,
         event_loop: &winit::event_loop::EventLoopWindowTarget<TE>,
     ) -> Result<(), DisplayCreationError> {
-        self.windows.push(TrackedWindowContainer::create::<TE>(
+        let twc = TrackedWindowContainer::create::<TE>(
             window.window_state,
             window.builder,
             event_loop,
             &window.options,
-        )?);
+        )?;
+        let w = twc.get_window_id();
+        let mut table = WINDOW_TABLE.lock().unwrap();
+        if let Some(id) = table.get_mut(&window.id) {
+            *id = w;
+        }
+        self.windows.push(twc);
         Ok(())
     }
 
@@ -116,7 +144,7 @@ impl<T: 'static + CommonEventHandler<T, U>, U: 'static> MultiWindow<T, U> {
                 }
 
                 for new_window_request in window_control.windows_to_create {
-                    let _e = self.add(new_window_request, event_loop_window_target);
+                    let _e = self.add(new_window_request, c, event_loop_window_target);
                 }
             }
             handled_windows.push(window);
@@ -134,13 +162,20 @@ impl<T: 'static + CommonEventHandler<T, U>, U: 'static> MultiWindow<T, U> {
         event_loop.run(move |event, event_loop_window_target, flow| {
             let c = &mut c;
             //println!("handling event {:?}", event);
-            let window_control_flow = if let winit::event::Event::UserEvent(event) = event {
-                for w in c.process_event(event) {
-                    let _e = self.add(w, event_loop_window_target);
+            let window_try = if let winit::event::Event::UserEvent(uevent) = &event {
+                uevent.window_id().is_some()
+            } else {
+                true
+            };
+            let window_control_flow = if window_try {
+                self.do_window_events(c, &event, event_loop_window_target)
+            } else {
+                if let winit::event::Event::UserEvent(uevent) = event {
+                    for w in c.process_event(uevent) {
+                        let _e = self.add(w, c, event_loop_window_target);
+                    }
                 }
                 vec![ControlFlow::Poll]
-            } else {
-                self.do_window_events(c, &event, event_loop_window_target)
             };
 
             // If any window requested polling, we should poll.
@@ -184,11 +219,43 @@ impl<T: 'static + CommonEventHandler<T, U>, U: 'static> MultiWindow<T, U> {
 }
 
 /// A struct defining how a new window is to be created.
-pub struct NewWindowRequest<T> {
+pub struct NewWindowRequest<T, U = DefaultCustomEvent> {
     /// The actual struct containing window data. The struct must implement the `TrackedWindow<T>` trait.
-    pub window_state: Box<dyn TrackedWindow<T>>,
+    pub window_state: Box<dyn TrackedWindow<T, U>>,
     /// Specifies how to build the window with a WindowBuilder
     pub builder: winit::window::WindowBuilder,
     /// Other options for the window.
     pub options: TrackedWindowOptions,
+    /// An id to allow a user program to translate window requests into actual window ids.
+    pub id: u32,
+}
+
+lazy_static::lazy_static! {
+    static ref WINDOW_REQUEST_ID: Mutex<u32> = Mutex::new(0u32);
+    static ref WINDOW_TABLE: Mutex<HashMap<u32, Option<WindowId>>> = Mutex::new(HashMap::new());
+}
+
+/// Creates a new id for a window request that the user program can do things with
+pub fn new_id() -> u32 {
+    let mut l = WINDOW_REQUEST_ID.lock().unwrap();
+    let mut table = WINDOW_TABLE.lock().unwrap();
+    loop {
+        *l = l.wrapping_add(1);
+        if !table.contains_key(&l) {
+            table.insert(*l, None);
+            break;
+        }
+    }
+    let val = *l;
+    val
+}
+
+/// Retrieve a window id
+pub fn get_window_id(id: u32) -> Option<WindowId> {
+    let table = WINDOW_TABLE.lock().unwrap();
+    if let Some(id) = table.get(&id) {
+        *id
+    } else {
+        None
+    }
 }
