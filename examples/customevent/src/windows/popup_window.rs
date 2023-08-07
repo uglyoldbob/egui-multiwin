@@ -120,6 +120,7 @@ impl TrackedWindow<AppCommon, CustomEvent> for PopupWindow {
         _c: &mut AppCommon,
         _egui: &mut EguiGlow,
         _window: &egui_multiwin::winit::window::Window,
+        _clipboard: &mut egui_multiwin::arboard::Clipboard,
     ) -> RedrawResponse<AppCommon, CustomEvent> {
         println!(
             "Popup window {} received an event {}",
@@ -136,6 +137,7 @@ impl TrackedWindow<AppCommon, CustomEvent> for PopupWindow {
         c: &mut AppCommon,
         egui: &mut EguiGlow,
         window: &egui_multiwin::winit::window::Window,
+        _clipboard: &mut egui_multiwin::arboard::Clipboard,
     ) -> RedrawResponse<AppCommon, CustomEvent> {
         let mut quit = false;
 

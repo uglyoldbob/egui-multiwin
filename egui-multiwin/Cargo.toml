@@ -13,6 +13,7 @@ repository = "https://github.com/uglyoldbob/egui-multiwin"
 serde = ["egui/serde"]
 
 [dependencies]
+arboard = "3.2.0"
 egui = "0.23"
 egui_glow = { version = "0.23", features = ["clipboard", "winit", "links"]}
 winit = "0.28.6"
