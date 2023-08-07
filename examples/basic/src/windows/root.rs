@@ -49,6 +49,7 @@ impl TrackedWindow<AppCommon> for RootWindow {
         c: &mut AppCommon,
         egui: &mut EguiGlow,
         _window: &egui_multiwin::winit::window::Window,
+        _clipboard: &mut egui_multiwin::arboard::Clipboard,
     ) -> RedrawResponse<AppCommon> {
         let mut quit = false;
 

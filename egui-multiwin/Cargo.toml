@@ -10,6 +10,7 @@ repository = "https://github.com/uglyoldbob/egui-multiwin"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+arboard = "3.2.0"
 egui = "0.22"
 egui_glow = { version = "0.22", features = ["winit", "links"]}
 winit = "0.28.6"

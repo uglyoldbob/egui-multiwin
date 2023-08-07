@@ -42,6 +42,8 @@ pub struct MultiWindow<T, U: EventTrait = DefaultCustomEvent> {
     windows: Vec<TrackedWindowContainer<T, U>>,
     /// A list of fonts to install on every egui instance
     fonts: HashMap<String, egui::FontData>,
+    /// The clipboard
+    clipboard: arboard::Clipboard,
 }
 
 impl<T: 'static + CommonEventHandler<T, U>, U: EventTrait + 'static> Default for MultiWindow<T, U> {
@@ -56,6 +58,7 @@ impl<T: 'static + CommonEventHandler<T, U>, U: EventTrait + 'static> MultiWindow
         MultiWindow {
             windows: vec![],
             fonts: HashMap::new(),
+            clipboard: arboard::Clipboard::new().unwrap(),
         }
     }
 
@@ -126,6 +129,7 @@ impl<T: 'static + CommonEventHandler<T, U>, U: EventTrait + 'static> MultiWindow
                     event_loop_window_target,
                     root_window_exists,
                     &self.fonts,
+                    &mut self.clipboard,
                 );
                 match window_control.requested_control_flow {
                     ControlFlow::Exit => {

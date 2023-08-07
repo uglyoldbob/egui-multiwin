@@ -153,6 +153,7 @@ pub trait TrackedWindow<T, U = DefaultCustomEvent> {
         _c: &mut T,
         _egui: &mut EguiGlow,
         _window: &winit::window::Window,
+        _clipboard: &mut arboard::Clipboard,
     ) -> RedrawResponse<T, U> {
         RedrawResponse {
             quit: false,
@@ -166,6 +167,7 @@ pub trait TrackedWindow<T, U = DefaultCustomEvent> {
         c: &mut T,
         egui: &mut EguiGlow,
         window: &winit::window::Window,
+        clipboard: &mut arboard::Clipboard,
     ) -> RedrawResponse<T, U>;
     /// Allows opengl rendering to be done underneath all of the egui stuff of the window
     /// # Safety
@@ -189,6 +191,7 @@ fn handle_event<COMMON, U: EventTrait>(
     egui: &mut EguiGlow,
     root_window_exists: bool,
     gl_window: &mut ContextHolder<PossiblyCurrentContext>,
+    clipboard: &mut arboard::Clipboard,
 ) -> TrackedWindowControl<COMMON, U> {
     // Child window's requested control flow.
     let mut control_flow = ControlFlow::Wait; // Unless this changes, we're fine waiting until the next event comes in.
@@ -198,7 +201,7 @@ fn handle_event<COMMON, U: EventTrait>(
         let ppp = input.pixels_per_point;
         egui.egui_ctx.begin_frame(input);
 
-        let rr = s.redraw(c, egui, &gl_window.window);
+        let rr = s.redraw(c, egui, &gl_window.window, clipboard);
 
         let full_output = egui.egui_ctx.end_frame();
 
@@ -246,7 +249,7 @@ fn handle_event<COMMON, U: EventTrait>(
         // See: https://github.com/rust-windowing/winit/issues/1619
         winit::event::Event::RedrawEventsCleared if cfg!(windows) => Some(redraw()),
         winit::event::Event::RedrawRequested(_) if !cfg!(windows) => Some(redraw()),
-        winit::event::Event::UserEvent(ue) => Some(s.custom_event(ue, c, egui, &gl_window.window)),
+        winit::event::Event::UserEvent(ue) => Some(s.custom_event(ue, c, egui, &gl_window.window, clipboard)),
 
         winit::event::Event::WindowEvent { event, .. } => {
             if let winit::event::WindowEvent::Resized(physical_size) = event {
@@ -429,6 +432,7 @@ impl<T, U: EventTrait> TrackedWindowContainer<T, U> {
         el: &EventLoopWindowTarget<U>,
         root_window_exists: bool,
         fontmap: &HashMap<String, egui::FontData>,
+        clipboard: &mut arboard::Clipboard,
     ) -> TrackedWindowControl<T, U> {
         // Activate this gl_window so we can use it.
         // We cannot activate it without full ownership, so temporarily move the gl_window into the current scope.
@@ -481,6 +485,7 @@ impl<T, U: EventTrait> TrackedWindowContainer<T, U> {
                     egui,
                     root_window_exists,
                     &mut gl_window,
+                    clipboard,
                 );
                 if let ControlFlow::Exit = result.requested_control_flow {
                     if self.window.can_quit(c) {
