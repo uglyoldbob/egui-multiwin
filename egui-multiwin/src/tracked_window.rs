@@ -178,7 +178,7 @@ fn handle_event<COMMON, U>(
         };
 
         {
-            let color = egui::Rgba::from_rgb(0.1, 0.3, 0.2);
+            let color = egui::Rgba::from_white_alpha(0.0);
             unsafe {
                 use glow::HasContext as _;
                 egui.painter

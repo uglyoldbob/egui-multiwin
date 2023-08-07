@@ -62,6 +62,9 @@ impl TrackedWindow<AppCommon> for RootWindow {
                 )));
                 self.num_popups_created += 1;
             }
+            if ui.button("New transparent window").clicked() {
+                windows_to_create.push(crate::windows::transparent_window::PopupWindow::request("Transparent".to_string()));
+            }
             if ui.button("Quit").clicked() {
                 quit = true;
             }
