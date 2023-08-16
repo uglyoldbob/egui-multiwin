@@ -328,7 +328,7 @@ dependencies = [
 
 [[package]]
 name = "egui-multiwin"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "egui",
  "egui_glow",
