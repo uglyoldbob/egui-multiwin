@@ -63,7 +63,9 @@ impl TrackedWindow<AppCommon> for RootWindow {
                 self.num_popups_created += 1;
             }
             if ui.button("New transparent window").clicked() {
-                windows_to_create.push(crate::windows::transparent_window::PopupWindow::request("Transparent".to_string()));
+                windows_to_create.push(crate::windows::transparent_window::PopupWindow::request(
+                    "Transparent".to_string(),
+                ));
             }
             if ui.button("Quit").clicked() {
                 quit = true;
@@ -72,7 +74,10 @@ impl TrackedWindow<AppCommon> for RootWindow {
         egui_multiwin::egui::CentralPanel::default().show(&egui.egui_ctx, |ui| {
             ui.heading(format!("number {}", c.clicks));
             let t = egui_multiwin::egui::widget_text::RichText::new("Example custom font text");
-            let t = t.font(FontId { size: 12.0, family: egui_multiwin::egui::FontFamily::Name("computermodern".into())});
+            let t = t.font(FontId {
+                size: 12.0,
+                family: egui_multiwin::egui::FontFamily::Name("computermodern".into()),
+            });
             ui.label(t);
         });
         RedrawResponse {

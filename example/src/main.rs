@@ -41,7 +41,10 @@ fn main() {
         println!("Failed to send event loop message: {:?}", e);
     }
     let mut multi_window: MultiWindow<AppCommon, u32> = MultiWindow::new();
-    multi_window.add_font("computermodern".to_string(), egui_multiwin::egui::FontData::from_static(COMPUTER_MODERN_FONT));
+    multi_window.add_font(
+        "computermodern".to_string(),
+        egui_multiwin::egui::FontData::from_static(COMPUTER_MODERN_FONT),
+    );
     let root_window = root::RootWindow::request();
     let root_window2 = popup_window::PopupWindow::request("initial popup".to_string());
 

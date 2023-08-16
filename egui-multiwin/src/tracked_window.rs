@@ -173,6 +173,10 @@ fn handle_event<COMMON, U>(
         } else if full_output.repaint_after.is_zero() {
             gl_window.window.request_redraw();
             control_flow = winit::event_loop::ControlFlow::Poll;
+        } else if full_output.repaint_after.as_millis() > 0 {
+            control_flow = winit::event_loop::ControlFlow::WaitUntil(
+                std::time::Instant::now() + full_output.repaint_after,
+            );
         } else {
             control_flow = winit::event_loop::ControlFlow::Wait;
         };
@@ -373,7 +377,7 @@ impl<T, U> TrackedWindowContainer<T, U> {
         let gl_window = mem::replace(&mut self.gl_window, IndeterminateWindowedContext::None);
         let mut gl_window = match gl_window {
             IndeterminateWindowedContext::PossiblyCurrent(w) => {
-                w.make_current().unwrap();
+                let _e = w.make_current();
                 w
             }
             IndeterminateWindowedContext::NotCurrent(w) => w.make_current().unwrap(),
@@ -397,7 +401,10 @@ impl<T, U> TrackedWindowContainer<T, U> {
                     let mut fonts = egui::FontDefinitions::default();
                     for (name, font) in fontmap {
                         fonts.font_data.insert(name.clone(), font.clone());
-                        fonts.families.insert(egui::FontFamily::Name(name.to_owned().into()), vec!(name.to_owned()));
+                        fonts.families.insert(
+                            egui::FontFamily::Name(name.to_owned().into()),
+                            vec![name.to_owned()],
+                        );
                     }
                     egui.egui_ctx.set_fonts(fonts)
                 }

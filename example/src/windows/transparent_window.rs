@@ -121,23 +121,26 @@ impl TrackedWindow<AppCommon> for PopupWindow {
         let style = egui::style::Style::default();
         let mut frame = egui::containers::Frame::central_panel(&style);
         frame.fill = egui::Color32::from_white_alpha(0);
-        egui_multiwin::egui::CentralPanel::default().frame(frame).show(&egui.egui_ctx, |ui| {
-            if ui.button("Increment").clicked() {
-                c.clicks += 1;
-                window.set_title(&format!("Title update {}", c.clicks));
-            }
-            let response = ui.add(egui_multiwin::egui::TextEdit::singleline(&mut self.input));
-            if response.changed() {
-                // …
-            }
-            if response.lost_focus() && ui.input(|i| i.key_pressed(egui_multiwin::egui::Key::Enter))
-            {
-                // …
-            }
-            if ui.button("Quit").clicked() {
-                quit = true;
-            }
-        });
+        egui_multiwin::egui::CentralPanel::default()
+            .frame(frame)
+            .show(&egui.egui_ctx, |ui| {
+                if ui.button("Increment").clicked() {
+                    c.clicks += 1;
+                    window.set_title(&format!("Title update {}", c.clicks));
+                }
+                let response = ui.add(egui_multiwin::egui::TextEdit::singleline(&mut self.input));
+                if response.changed() {
+                    // …
+                }
+                if response.lost_focus()
+                    && ui.input(|i| i.key_pressed(egui_multiwin::egui::Key::Enter))
+                {
+                    // …
+                }
+                if ui.button("Quit").clicked() {
+                    quit = true;
+                }
+            });
         RedrawResponse {
             quit,
             new_windows: Vec::new(),

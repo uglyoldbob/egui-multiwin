@@ -43,13 +43,13 @@ impl<T: 'static + CommonEventHandler<T, U>, U: 'static> MultiWindow<T, U> {
     /// ```
     /// use egui_multiwin::multi_window::NewWindowRequest;
     /// struct Custom {}
-    /// 
+    ///
     /// impl egui_multiwin::multi_window::CommonEventHandler<Custom, u32> for Custom {
     ///     fn process_event(&mut self, _event: u32)  -> Vec<NewWindowRequest<Custom>>{
     ///         vec!()
     ///     }
     /// }
-    /// 
+    ///
     /// let mut multi_window: egui_multiwin::multi_window::MultiWindow<Custom, u32> = egui_multiwin::multi_window::MultiWindow::new();
     /// let DATA = include_bytes!("cmunbtl.ttf");
     /// multi_window.add_font("my_font".to_string(), egui_multiwin::egui::FontData::from_static(DATA));
