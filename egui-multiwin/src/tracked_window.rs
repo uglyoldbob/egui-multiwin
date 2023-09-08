@@ -173,7 +173,7 @@ fn handle_event<COMMON, U>(
         } else if full_output.repaint_after.is_zero() {
             gl_window.window.request_redraw();
             control_flow = winit::event_loop::ControlFlow::Poll;
-        } else if full_output.repaint_after.as_millis() > 0 {
+        } else if full_output.repaint_after.as_millis() > 0 && full_output.repaint_after.as_millis() < 10000 {
             control_flow = winit::event_loop::ControlFlow::WaitUntil(
                 std::time::Instant::now() + full_output.repaint_after,
             );
