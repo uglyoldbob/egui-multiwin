@@ -119,7 +119,7 @@ pub trait TrackedWindow<T> {
     }
 
     /// Returns true when the window is allowed to close. Default is windows are always allowed to close. Override to change this behavior.
-    fn can_quit(&self, _c: &mut T) -> bool {
+    fn can_quit(&mut self, _c: &mut T) -> bool {
         true
     }
 
