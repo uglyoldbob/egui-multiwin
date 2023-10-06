@@ -5,4 +5,4 @@ edition = "2018"
 publish = ["crates-io"]
 
 [dependencies]
-egui-multiwin = { version = "0.1.10",  path = "../egui-multiwin" }
+egui-multiwin = { version = "0.1.11",  path = "../egui-multiwin" }

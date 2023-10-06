@@ -5,6 +5,7 @@ use std::num::NonZeroU32;
 use std::{mem, sync::Arc};
 
 use crate::multi_window::NewWindowRequest;
+use egui::NumExt;
 use egui_glow::glow;
 use egui_glow::EguiGlow;
 use glutin::context::{NotCurrentContext, PossiblyCurrentContext};
@@ -69,8 +70,8 @@ impl ContextHolder<PossiblyCurrentContext> {
         let h = size.height;
         self.ws.resize(
             &self.context,
-            NonZeroU32::new(w).unwrap(),
-            NonZeroU32::new(h).unwrap(),
+            NonZeroU32::new(w.at_least(1)).unwrap(),
+            NonZeroU32::new(h.at_least(1)).unwrap(),
         )
     }
 
