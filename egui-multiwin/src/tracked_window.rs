@@ -59,22 +59,13 @@ impl<T> ContextHolder<T> {
 impl ContextHolder<PossiblyCurrentContext> {
     /// Call swap_buffers. linux targets have vsync specifically disabled because it causes problems with hidden windows.
     fn swap_buffers(&self) -> glutin::error::Result<()> {
-        #[cfg(target_os = "linux")]
-        {
-            let _e = self
-                .ws
-                .set_swap_interval(&self.context, glutin::surface::SwapInterval::DontWait);
+        let interval = if self.vsync {
+            glutin::surface::SwapInterval::Wait(unsafe { NonZeroU32::new_unchecked(1) })
         }
-        #[cfg(not(target_os = "linux"))]
-        {
-            let interval = if self.vsync {
-                glutin::surface::SwapInterval::Wait(unsafe { NonZeroU32::new_unchecked(1) })
-            }
-            else {
-                glutin::surface::SwapInterval::DontWait
-            };
-            let _e = self.ws.set_swap_interval(&self.context, interval);
-        }
+        else {
+            glutin::surface::SwapInterval::DontWait
+        };
+        let _e = self.ws.set_swap_interval(&self.context, interval);
         self.ws.swap_buffers(&self.context)
     }
 
