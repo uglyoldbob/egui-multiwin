@@ -111,7 +111,11 @@ impl TrackedWindow<AppCommon, CustomEvent> for PopupWindow {
     }
 
     fn can_quit(&mut self, c: &mut AppCommon) -> bool {
-        (c.clicks & 1) == 0
+        let quit = (c.clicks & 1) == 0;
+        if quit {
+            c.popup_windows.remove(&self.id);
+        }
+        quit
     }
 
     fn custom_event(
