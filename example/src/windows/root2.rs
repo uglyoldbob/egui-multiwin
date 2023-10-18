@@ -33,7 +33,7 @@ impl RootWindow {
                 })
                 .with_title("egui-multiwin root window"),
             options: egui_multiwin::tracked_window::TrackedWindowOptions {
-                vsync: false,
+                vsync: true,
                 shader: None,
             },
         }
@@ -54,7 +54,6 @@ impl TrackedWindow<AppCommon> for RootWindow {
         _window: &egui_multiwin::winit::window::Window,
     ) -> RedrawResponse<AppCommon> {
         let mut quit = false;
-
         egui.egui_ctx.request_repaint();
 
         let cur_time = std::time::Instant::now();
@@ -72,6 +71,7 @@ impl TrackedWindow<AppCommon> for RootWindow {
         let mut windows_to_create = vec![];
 
         egui_multiwin::egui::SidePanel::left("my_side_panel").show(&egui.egui_ctx, |ui| {
+            ui.label(format!("The fps is {}", self.fps.unwrap()));
             ui.heading("Hello World!");
             if ui.button("New popup").clicked() {
                 windows_to_create.push(PopupWindow::request(format!(
@@ -90,7 +90,6 @@ impl TrackedWindow<AppCommon> for RootWindow {
             }
         });
         egui_multiwin::egui::CentralPanel::default().show(&egui.egui_ctx, |ui| {
-            ui.label(format!("The fps is {}", self.fps.unwrap()));
             ui.heading(format!("number {}", c.clicks));
             let t = egui_multiwin::egui::widget_text::RichText::new("Example custom font text");
             let t = t.font(FontId {

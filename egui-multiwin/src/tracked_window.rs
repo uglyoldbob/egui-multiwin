@@ -33,6 +33,8 @@ pub struct ContextHolder<T> {
     ws: glutin::surface::Surface<WindowSurface>,
     /// The display
     display: glutin::display::Display,
+    /// Should vsync be enabled?
+    vsync: bool,
 }
 
 impl<T> ContextHolder<T> {
@@ -42,12 +44,14 @@ impl<T> ContextHolder<T> {
         window: winit::window::Window,
         ws: glutin::surface::Surface<WindowSurface>,
         display: glutin::display::Display,
+        vsync: bool,
     ) -> Self {
         Self {
             context,
             window,
             ws,
             display,
+            vsync,
         }
     }
 }
@@ -60,6 +64,16 @@ impl ContextHolder<PossiblyCurrentContext> {
             let _e = self
                 .ws
                 .set_swap_interval(&self.context, glutin::surface::SwapInterval::DontWait);
+        }
+        #[cfg(not(target_os = "linux"))]
+        {
+            let interval = if self.vsync {
+                glutin::surface::SwapInterval::Wait(unsafe { NonZeroU32::new_unchecked(1) })
+            }
+            else {
+                glutin::surface::SwapInterval::DontWait
+            };
+            let _e = self.ws.set_swap_interval(&self.context, interval);
         }
         self.ws.swap_buffers(&self.context)
     }
@@ -97,6 +111,7 @@ impl ContextHolder<NotCurrentContext> {
             window: self.window,
             ws: self.ws,
             display: self.display,
+            vsync: self.vsync,
         };
         Ok(s)
     }
@@ -328,6 +343,7 @@ impl<T, U> TrackedWindowContainer<T, U> {
                         winitwindow,
                         ws,
                         display,
+                        options.vsync,
                     )),
                     egui: None,
                     shader: options.shader,
