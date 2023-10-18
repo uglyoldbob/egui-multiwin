@@ -116,6 +116,7 @@ impl TrackedWindow<AppCommon> for PopupWindow {
         c: &mut AppCommon,
         egui: &mut EguiGlow,
         window: &egui_multiwin::winit::window::Window,
+        _clipboard: &mut egui_multiwin::arboard::Clipboard,
     ) -> RedrawResponse<AppCommon> {
         let mut quit = false;
 

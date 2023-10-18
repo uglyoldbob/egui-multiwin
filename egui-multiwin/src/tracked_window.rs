@@ -6,6 +6,7 @@ use std::{mem, sync::Arc};
 
 use crate::multi_window::{DefaultCustomEvent, EventTrait, NewWindowRequest};
 
+use egui::NumExt;
 use egui_glow::glow;
 use egui_glow::EguiGlow;
 use glutin::context::{NotCurrentContext, PossiblyCurrentContext};

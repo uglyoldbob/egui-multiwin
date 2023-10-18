@@ -110,7 +110,7 @@ impl TrackedWindow<AppCommon, CustomEvent> for PopupWindow {
         gl.draw_arrays(glow::TRIANGLES, 0, 3);
     }
 
-    fn can_quit(&self, c: &mut AppCommon) -> bool {
+    fn can_quit(&mut self, c: &mut AppCommon) -> bool {
         (c.clicks & 1) == 0
     }
 
