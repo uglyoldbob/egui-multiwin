@@ -90,19 +90,34 @@ impl TrackedWindow<AppCommon, CustomEvent> for RootWindow {
                 family: egui_multiwin::egui::FontFamily::Name("computermodern".into()),
             });
             ui.label(t);
+
+            if let Some(wid) = egui_multiwin::multi_window::get_window_id(c.root_window) {
+                ui.label(format!("Root window id {} has window id {:?}", c.root_window, wid));
+                if ui.button("Send message").clicked() {
+                    if let Err(e) = c.sender.send_event(CustomEvent {
+                        window: Some(wid),
+                        message: 40,
+                    }) {
+                        println!("Failed to send message to root window {:?}", e);
+                    }
+                }
+            } else {
+                ui.label(format!("Root window id {} failed", c.root_window));
+            }
+
             for id in &c.popup_windows {
                 if let Some(wid) = egui_multiwin::multi_window::get_window_id(*id) {
                     ui.label(format!("Popup window id {} has window id {:?}", id, wid));
                     if ui.button("Send message").clicked() {
                         if let Err(e) = c.sender.send_event(CustomEvent {
                             window: Some(wid),
-                            message: 41,
+                            message: 40,
                         }) {
                             println!("Failed to send message to popupwindow {:?}", e);
                         }
                     }
                 } else {
-                    ui.label(format!("Popup window id {}", id));
+                    ui.label(format!("Popup window id {} failed", id));
                 }
             }
         });

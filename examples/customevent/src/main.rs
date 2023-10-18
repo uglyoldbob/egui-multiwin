@@ -16,6 +16,7 @@ use windows::{
 
 pub struct AppCommon {
     clicks: u32,
+    root_window: u32,
     popup_windows: HashSet<u32>,
     sender: EventLoopProxy<CustomEvent>,
 }
@@ -58,7 +59,7 @@ fn main() {
     let proxy = event_loop.create_proxy();
     if let Err(e) = proxy.send_event(CustomEvent {
         window: None,
-        message: 42,
+        message: 41,
     }) {
         println!("Error sending non-window specific event: {:?}", e);
     }
@@ -72,9 +73,10 @@ fn main() {
 
     let mut ac = AppCommon {
         clicks: 0,
+        root_window: root_window.id,
         popup_windows: HashSet::new(),
         sender: proxy,
-    };
+    };    
 
     ac.popup_windows.insert(root_window2.id);
     match multi_window.add(root_window, &mut ac, &event_loop) {
