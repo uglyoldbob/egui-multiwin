@@ -37,8 +37,6 @@ pub struct ContextHolder<T> {
     display: glutin::display::Display,
     /// The options for the display
     options: TrackedWindowOptions,
-    /// Is the window visible? This disables vsync for this window if false
-    visible: bool,
 }
 
 impl<T> ContextHolder<T> {
@@ -56,7 +54,6 @@ impl<T> ContextHolder<T> {
             ws,
             display,
             options,
-            visible: false,
         }
     }
 }
@@ -64,7 +61,7 @@ impl<T> ContextHolder<T> {
 impl ContextHolder<PossiblyCurrentContext> {
     /// Call swap_buffers. linux targets have vsync specifically disabled because it causes problems with hidden windows.
     fn swap_buffers(&self) -> glutin::error::Result<()> {
-        if self.options.vsync && self.visible {
+        if self.options.vsync {
             let _e = self.ws.set_swap_interval(
                 &self.context,
                 glutin::surface::SwapInterval::Wait(NonZeroU32::new(1).unwrap()),
@@ -111,7 +108,6 @@ impl ContextHolder<NotCurrentContext> {
             ws: self.ws,
             display: self.display,
             options: self.options,
-            visible: self.visible,
         };
         Ok(s)
     }

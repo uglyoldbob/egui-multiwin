@@ -3,4 +3,6 @@ resolver = "2"
 members = ["egui-multiwin", 
     "examples/basic", 
     "examples/customevent",
-    "examples/clipboard"]
+    "examples/clipboard",
+    "examples/vsync",
+    ]

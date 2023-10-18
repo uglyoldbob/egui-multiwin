@@ -15,7 +15,7 @@ serde = ["egui/serde"]
 [dependencies]
 arboard = "3.2.0"
 egui = "0.23"
-egui_glow = { version = "0.23", features = ["clipboard", "winit", "links"]}
+egui_glow = { version = "0.23", features = ["winit", "links"]}
 winit = "0.28.6"
 glutin = "0.30.8"
 lazy_static = "1.4.0"
