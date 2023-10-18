@@ -54,8 +54,6 @@ impl CommonEventHandler<AppCommon, CustomEvent> for AppCommon {
 
 fn main() {
     let mut event_loop = egui_multiwin::winit::event_loop::EventLoopBuilder::with_user_event();
-    #[cfg(target_os = "linux")]
-    egui_multiwin::winit::platform::x11::EventLoopBuilderExtX11::with_x11(&mut event_loop);
     let event_loop = event_loop.build();
     let proxy = event_loop.create_proxy();
     if let Err(e) = proxy.send_event(CustomEvent {
