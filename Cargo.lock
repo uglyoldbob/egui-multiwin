@@ -800,6 +800,16 @@ dependencies = [
 [[package]]
 name = "multiwin-demo6"
 version = "0.1.0"
+dependencies = [
+ "arboard",
+ "egui",
+ "egui_glow",
+ "glutin",
+ "lazy_static",
+ "raw-window-handle",
+ "thiserror",
+ "winit",
+]
 
 [[package]]
 name = "ndk"

@@ -81,7 +81,7 @@ impl<T: 'static + CommonEventHandler<T, U>, U: EventTrait + 'static> MultiWindow
     /// ```
     /// use egui_multiwin::multi_window::NewWindowRequest;
     /// struct Custom {}
-    /// 
+    ///
     /// impl egui_multiwin::multi_window::CommonEventHandler<Custom> for Custom {
     ///     fn process_event(&mut self, _event: egui_multiwin::multi_window::DefaultCustomEvent)  -> Vec<NewWindowRequest<Custom>>{
     ///         vec!()

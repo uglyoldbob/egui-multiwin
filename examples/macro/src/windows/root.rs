@@ -1,6 +1,6 @@
-use egui_multiwin::egui::FontId;
-use egui_multiwin::egui_glow::EguiGlow;
-use egui_multiwin::{
+use crate::egui_multiwin::egui::FontId;
+use crate::egui_multiwin::egui_glow::EguiGlow;
+use crate::egui_multiwin::{
     multi_window::NewWindowRequest,
     tracked_window::{RedrawResponse, TrackedWindow},
 };
@@ -21,18 +21,18 @@ impl RootWindow {
                 button_press_count: 0,
                 num_popups_created: 0,
             }),
-            builder: egui_multiwin::winit::window::WindowBuilder::new()
+            builder: crate::egui_multiwin::winit::window::WindowBuilder::new()
                 .with_resizable(true)
-                .with_inner_size(egui_multiwin::winit::dpi::LogicalSize {
+                .with_inner_size(crate::egui_multiwin::winit::dpi::LogicalSize {
                     width: 800.0,
                     height: 600.0,
                 })
                 .with_title("egui-multiwin root window"),
-            options: egui_multiwin::tracked_window::TrackedWindowOptions {
+            options: crate::egui_multiwin::tracked_window::TrackedWindowOptions {
                 vsync: false,
                 shader: None,
             },
-            id: egui_multiwin::multi_window::new_id(),
+            id: crate::egui_multiwin::multi_window::new_id(),
         }
     }
 }
@@ -47,8 +47,8 @@ impl TrackedWindow<AppCommon, CustomEvent> for RootWindow {
         event: &CustomEvent,
         _c: &mut AppCommon,
         _egui: &mut EguiGlow,
-        _window: &egui_multiwin::winit::window::Window,
-        _clipboard: &mut egui_multiwin::arboard::Clipboard,
+        _window: &crate::egui_multiwin::winit::window::Window,
+        _clipboard: &mut crate::egui_multiwin::arboard::Clipboard,
     ) -> RedrawResponse<AppCommon, CustomEvent> {
         println!("Main window received an event {}", event.message);
         RedrawResponse {
@@ -63,14 +63,14 @@ impl TrackedWindow<AppCommon, CustomEvent> for RootWindow {
         &mut self,
         c: &mut AppCommon,
         egui: &mut EguiGlow,
-        _window: &egui_multiwin::winit::window::Window,
-        _clipboard: &mut egui_multiwin::arboard::Clipboard,
+        _window: &crate::egui_multiwin::winit::window::Window,
+        _clipboard: &mut crate::egui_multiwin::arboard::Clipboard,
     ) -> RedrawResponse<AppCommon, CustomEvent> {
         let mut quit = false;
 
         let mut windows_to_create = vec![];
 
-        egui_multiwin::egui::SidePanel::left("my_side_panel").show(&egui.egui_ctx, |ui| {
+        crate::egui_multiwin::egui::SidePanel::left("my_side_panel").show(&egui.egui_ctx, |ui| {
             ui.heading("Hello World!");
             if ui.button("New popup").clicked() {
                 let r = PopupWindow::request(format!("popup window #{}", self.num_popups_created));
@@ -82,16 +82,17 @@ impl TrackedWindow<AppCommon, CustomEvent> for RootWindow {
                 quit = true;
             }
         });
-        egui_multiwin::egui::CentralPanel::default().show(&egui.egui_ctx, |ui| {
+        crate::egui_multiwin::egui::CentralPanel::default().show(&egui.egui_ctx, |ui| {
             ui.heading(format!("number {}", c.clicks));
-            let t = egui_multiwin::egui::widget_text::RichText::new("Example custom font text");
+            let t =
+                crate::egui_multiwin::egui::widget_text::RichText::new("Example custom font text");
             let t = t.font(FontId {
                 size: 12.0,
-                family: egui_multiwin::egui::FontFamily::Name("computermodern".into()),
+                family: crate::egui_multiwin::egui::FontFamily::Name("computermodern".into()),
             });
             ui.label(t);
 
-            if let Some(wid) = egui_multiwin::multi_window::get_window_id(c.root_window) {
+            if let Some(wid) = crate::egui_multiwin::multi_window::get_window_id(c.root_window) {
                 ui.label(format!(
                     "Root window id {} has window id {:?}",
                     c.root_window, wid
@@ -109,7 +110,7 @@ impl TrackedWindow<AppCommon, CustomEvent> for RootWindow {
             }
 
             for id in &c.popup_windows {
-                if let Some(wid) = egui_multiwin::multi_window::get_window_id(*id) {
+                if let Some(wid) = crate::egui_multiwin::multi_window::get_window_id(*id) {
                     ui.label(format!("Popup window id {} has window id {:?}", id, wid));
                     if ui.button("Send message").clicked() {
                         if let Err(e) = c.sender.send_event(CustomEvent {

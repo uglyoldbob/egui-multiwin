@@ -23,13 +23,13 @@
 //! pub struct AppCommon {
 //!     clicks: u32,
 //! }
-//! 
+//!
 //! #[derive(Debug)]
 //! pub struct CustomEvent {
 //!     window: Option<winit::window::WindowId>,
 //!     message: u32,
 //! }
-//! 
+//!
 //! impl egui_multiwin::multi_window::EventTrait for CustomEvent {
 //!     fn window_id(&self) -> Option<winit::window::WindowId> {
 //!         self.window
