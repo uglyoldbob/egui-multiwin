@@ -1,9 +1,5 @@
 [workspace]
 resolver = "2"
 members = ["egui-multiwin", 
-    "examples/basic", 
-    "examples/customevent",
-    "examples/customevent2",
-    "examples/clipboard",
-    "examples/vsync",
+    "examples/macro",
     ]
