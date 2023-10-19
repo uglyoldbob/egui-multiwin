@@ -2,9 +2,7 @@
 
 use std::{collections::HashMap, sync::Mutex};
 
-use winit::
-    window::WindowId
-;
+use winit::window::WindowId;
 
 lazy_static::lazy_static! {
     static ref WINDOW_REQUEST_ID: Mutex<u32> = Mutex::new(0u32);

@@ -1,27 +1,16 @@
 //! This module covers definition and functionality for an individual window.
 
-use std::collections::HashMap;
 use std::num::NonZeroU32;
-use std::{mem, sync::Arc};
 
 use egui::NumExt;
-use egui_glow::glow;
-use egui_glow::EguiGlow;
 use glutin::context::{NotCurrentContext, PossiblyCurrentContext};
-use glutin::prelude::{GlConfig, GlDisplay};
+use glutin::prelude::GlDisplay;
 use glutin::prelude::{
     NotCurrentGlContextSurfaceAccessor, PossiblyCurrentContextGlSurfaceAccessor,
 };
 use glutin::surface::GlSurface;
-use glutin::surface::SurfaceAttributesBuilder;
 use glutin::surface::WindowSurface;
-use raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle};
 use thiserror::Error;
-use winit::window::WindowId;
-use winit::{
-    event::Event,
-    event_loop::{ControlFlow, EventLoopWindowTarget},
-};
 
 /// A holder of context and related items
 pub struct ContextHolder<T> {
@@ -98,7 +87,9 @@ impl ContextHolder<PossiblyCurrentContext> {
 
 impl ContextHolder<NotCurrentContext> {
     /// Transforms a not current context into a possibly current context
-    pub fn make_current(self) -> Result<ContextHolder<PossiblyCurrentContext>, glutin::error::Error> {
+    pub fn make_current(
+        self,
+    ) -> Result<ContextHolder<PossiblyCurrentContext>, glutin::error::Error> {
         let c = self.context.make_current(&self.ws).unwrap();
         let s = ContextHolder::<PossiblyCurrentContext> {
             context: c,
@@ -119,7 +110,6 @@ pub struct TrackedWindowOptions {
     /// Optionally sets the shader version for the window.
     pub shader: Option<egui_glow::ShaderVersion>,
 }
-
 
 /// Enum of the potential options for a window context
 pub enum IndeterminateWindowedContext {

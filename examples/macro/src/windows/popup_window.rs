@@ -1,10 +1,10 @@
 //! This is an example of a popup window. It is likely very crude on the opengl_after function and could probably be optimized
-use egui_multiwin::egui_glow::glow;
-use egui_multiwin::egui_glow::EguiGlow;
 use crate::egui_multiwin_dynamic::{
     multi_window::NewWindowRequest,
     tracked_window::{RedrawResponse, TrackedWindow},
 };
+use egui_multiwin::egui_glow::glow;
+use egui_multiwin::egui_glow::EguiGlow;
 
 use crate::AppCommon;
 use crate::CustomEvent;
@@ -152,14 +152,11 @@ impl TrackedWindow for PopupWindow {
                 window.set_title(&format!("Title update {}", c.clicks));
             }
             ui.label(format!("I have been clicked {} times", self.clicks));
-            let response = ui.add(egui_multiwin::egui::TextEdit::singleline(
-                &mut self.input,
-            ));
+            let response = ui.add(egui_multiwin::egui::TextEdit::singleline(&mut self.input));
             if response.changed() {
                 // …
             }
-            if response.lost_focus()
-                && ui.input(|i| i.key_pressed(egui_multiwin::egui::Key::Enter))
+            if response.lost_focus() && ui.input(|i| i.key_pressed(egui_multiwin::egui::Key::Enter))
             {
                 // …
             }

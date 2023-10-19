@@ -5,30 +5,25 @@ pub mod egui_multiwin_dynamic {
         //! This module covers definition and functionality for an individual window.
 
         use std::collections::HashMap;
-        use std::num::NonZeroU32;
         use std::{mem, sync::Arc};
 
         use super::multi_window::NewWindowRequest;
 
-        use egui_multiwin::raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle};
-        use egui_multiwin::egui::{NumExt, self};
-        use egui_multiwin::egui_glow::{glow, self};
+        use egui_multiwin::egui;
         use egui_multiwin::egui_glow::EguiGlow;
-        use egui_multiwin::{glutin, winit, arboard};
+        use egui_multiwin::egui_glow::{self, glow};
         use egui_multiwin::glutin::context::{NotCurrentContext, PossiblyCurrentContext};
         use egui_multiwin::glutin::prelude::{GlConfig, GlDisplay};
-        use egui_multiwin::glutin::prelude::{
-            NotCurrentGlContextSurfaceAccessor, PossiblyCurrentContextGlSurfaceAccessor,
-        };
-        use egui_multiwin::glutin::surface::GlSurface;
         use egui_multiwin::glutin::surface::SurfaceAttributesBuilder;
         use egui_multiwin::glutin::surface::WindowSurface;
+        use egui_multiwin::raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle};
         use egui_multiwin::tracked_window::{ContextHolder, TrackedWindowOptions};
         use egui_multiwin::winit::window::WindowId;
         use egui_multiwin::winit::{
             event::Event,
             event_loop::{ControlFlow, EventLoopWindowTarget},
         };
+        use egui_multiwin::{arboard, glutin, winit};
 
         /// The return value of the redraw function of trait `TrackedWindow<T>`
         pub struct RedrawResponse {
@@ -83,13 +78,22 @@ pub mod egui_multiwin_dynamic {
             /// # Safety
             ///
             /// opengl functions are unsafe. This function would require calling opengl functions.
-            unsafe fn opengl_before(&mut self, _c: &mut crate::AppCommon, _gl: &Arc<egui_multiwin::egui_glow::painter::Context>) {
+            unsafe fn opengl_before(
+                &mut self,
+                _c: &mut crate::AppCommon,
+                _gl: &Arc<egui_multiwin::egui_glow::painter::Context>,
+            ) {
             }
             /// Allows opengl rendering to be done on top of all of the egui stuff of the window
             /// # Safety
             ///
             /// opengl functions are unsafe. This function would require calling opengl functions.
-            unsafe fn opengl_after(&mut self, _c: &mut crate::AppCommon, _gl: &Arc<egui_multiwin::egui_glow::painter::Context>) {}
+            unsafe fn opengl_after(
+                &mut self,
+                _c: &mut crate::AppCommon,
+                _gl: &Arc<egui_multiwin::egui_glow::painter::Context>,
+            ) {
+            }
         }
 
         /// Handles one event from the event loop. Returns true if the window needs to be kept alive,
@@ -164,14 +168,19 @@ pub mod egui_multiwin_dynamic {
                 // Platform-dependent event handlers to workaround a winit bug
                 // See: https://github.com/rust-windowing/winit/issues/987
                 // See: https://github.com/rust-windowing/winit/issues/1619
-                egui_multiwin::winit::event::Event::RedrawEventsCleared if cfg!(windows) => Some(redraw()),
-                egui_multiwin::winit::event::Event::RedrawRequested(_) if !cfg!(windows) => Some(redraw()),
+                egui_multiwin::winit::event::Event::RedrawEventsCleared if cfg!(windows) => {
+                    Some(redraw())
+                }
+                egui_multiwin::winit::event::Event::RedrawRequested(_) if !cfg!(windows) => {
+                    Some(redraw())
+                }
                 egui_multiwin::winit::event::Event::UserEvent(ue) => {
                     Some(s.custom_event(ue, c, egui, &gl_window.window, clipboard))
                 }
 
                 egui_multiwin::winit::event::Event::WindowEvent { event, .. } => {
-                    if let egui_multiwin::winit::event::WindowEvent::Resized(physical_size) = event {
+                    if let egui_multiwin::winit::event::WindowEvent::Resized(physical_size) = event
+                    {
                         gl_window.resize(*physical_size);
                     }
 
@@ -270,7 +279,8 @@ pub mod egui_multiwin_dynamic {
                         let ws = unsafe { display.create_window_surface(&config, &sa) };
                         if let Ok(ws) = ws {
                             let attr =
-                                egui_multiwin::glutin::context::ContextAttributesBuilder::new().build(Some(rwh));
+                                egui_multiwin::glutin::context::ContextAttributesBuilder::new()
+                                    .build(Some(rwh));
 
                             let gl_window =
                                 unsafe { display.create_context(&config, &attr) }.unwrap();
@@ -297,7 +307,10 @@ pub mod egui_multiwin_dynamic {
             }
 
             /// Returns true if the specified event is for this window. A UserEvent (one generated by the EventLoopProxy) is not for any window.
-            pub fn is_event_for_window(&self, event: &winit::event::Event<crate::CustomEvent>) -> bool {
+            pub fn is_event_for_window(
+                &self,
+                event: &winit::event::Event<crate::CustomEvent>,
+            ) -> bool {
                 // Check if the window ID matches, if not then this window can pass on the event.
                 match (event, &self.gl_window) {
                     (
@@ -453,16 +466,17 @@ pub mod egui_multiwin_dynamic {
     pub mod multi_window {
         //! This defines the MultiWindow struct. This is the main struct used in the main function of a user application.
 
-        use std::{collections::HashMap, sync::Mutex};
+        use std::collections::HashMap;
 
-        use egui_multiwin::{winit::{
-            event_loop::{ControlFlow, EventLoop},
-            window::WindowId, self,
-        }, tracked_window::TrackedWindowOptions};
-
-        use super::tracked_window::{
-            DisplayCreationError, TrackedWindow, TrackedWindowContainer,
+        use egui_multiwin::{
+            tracked_window::TrackedWindowOptions,
+            winit::{
+                self,
+                event_loop::{ControlFlow, EventLoop},
+            },
         };
+
+        use super::tracked_window::{DisplayCreationError, TrackedWindow, TrackedWindowContainer};
 
         /// This trait allows for non-window specific events to be sent to the event loop.
         /// It allows for non-gui threads or code to interact with the gui through the common struct
@@ -502,9 +516,14 @@ pub mod egui_multiwin_dynamic {
 
             /// A simpler way to start up a user application. The provided closure should initialize the root window, add any fonts desired, store the proxy if it is needed, and return the common app struct.
             pub fn start(
-                t: impl FnOnce(&mut Self, &EventLoop<crate::CustomEvent>, egui_multiwin::winit::event_loop::EventLoopProxy<crate::CustomEvent>) -> crate::AppCommon,
+                t: impl FnOnce(
+                    &mut Self,
+                    &EventLoop<crate::CustomEvent>,
+                    egui_multiwin::winit::event_loop::EventLoopProxy<crate::CustomEvent>,
+                ) -> crate::AppCommon,
             ) {
-                let mut event_loop = egui_multiwin::winit::event_loop::EventLoopBuilder::with_user_event();
+                let mut event_loop =
+                    egui_multiwin::winit::event_loop::EventLoopBuilder::with_user_event();
                 let event_loop = event_loop.build();
                 let proxy = event_loop.create_proxy();
                 let mut multi_window = Self::new();
@@ -538,7 +557,7 @@ pub mod egui_multiwin_dynamic {
             pub fn add<TE>(
                 &mut self,
                 window: NewWindowRequest,
-                c: &mut crate::AppCommon,
+                _c: &mut crate::AppCommon,
                 event_loop: &egui_multiwin::winit::event_loop::EventLoopWindowTarget<TE>,
             ) -> Result<(), DisplayCreationError> {
                 let twc = TrackedWindowContainer::create::<TE>(
@@ -561,7 +580,9 @@ pub mod egui_multiwin_dynamic {
                 &mut self,
                 c: &mut crate::AppCommon,
                 event: &winit::event::Event<crate::CustomEvent>,
-                event_loop_window_target: &winit::event_loop::EventLoopWindowTarget<crate::CustomEvent>,
+                event_loop_window_target: &winit::event_loop::EventLoopWindowTarget<
+                    crate::CustomEvent,
+                >,
             ) -> Vec<ControlFlow> {
                 let mut handled_windows = vec![];
                 let mut window_control_flow = vec![];
@@ -614,7 +635,11 @@ pub mod egui_multiwin_dynamic {
             }
 
             /// Runs the event loop until all `TrackedWindow`s are closed.
-            pub fn run(mut self, event_loop: EventLoop<crate::CustomEvent>, mut c: crate::AppCommon) {
+            pub fn run(
+                mut self,
+                event_loop: EventLoop<crate::CustomEvent>,
+                mut c: crate::AppCommon,
+            ) {
                 event_loop.run(move |event, event_loop_window_target, flow| {
                     let c = &mut c;
                     //println!("handling event {:?}", event);
@@ -688,10 +713,9 @@ pub mod egui_multiwin_dynamic {
     }
 }
 
-use egui_multiwin::
-    winit::{event_loop::EventLoopProxy, window::WindowId};
+use egui_multiwin::winit::{event_loop::EventLoopProxy, window::WindowId};
 
-use egui_multiwin_dynamic::multi_window::{CommonEventHandler, MultiWindow};
+use egui_multiwin_dynamic::multi_window::CommonEventHandler;
 
 mod windows;
 
@@ -742,34 +766,36 @@ impl CommonEventHandler for AppCommon {
 }
 
 fn main() {
-    crate::egui_multiwin_dynamic::multi_window::MultiWindow::start(|multi_window, event_loop, proxy| {
-        multi_window.add_font(
-            "computermodern".to_string(),
-            egui_multiwin::egui::FontData::from_static(COMPUTER_MODERN_FONT),
-        );
-        let root_window = root::RootWindow::request();
-        let root_window2 = popup_window::PopupWindow::request("initial popup".to_string());
+    crate::egui_multiwin_dynamic::multi_window::MultiWindow::start(
+        |multi_window, event_loop, proxy| {
+            multi_window.add_font(
+                "computermodern".to_string(),
+                egui_multiwin::egui::FontData::from_static(COMPUTER_MODERN_FONT),
+            );
+            let root_window = root::RootWindow::request();
+            let root_window2 = popup_window::PopupWindow::request("initial popup".to_string());
 
-        let mut ac = AppCommon {
-            clicks: 0,
-            root_window: root_window.id,
-            popup_windows: HashSet::new(),
-            sender: proxy,
-        };
+            let mut ac = AppCommon {
+                clicks: 0,
+                root_window: root_window.id,
+                popup_windows: HashSet::new(),
+                sender: proxy,
+            };
 
-        ac.popup_windows.insert(root_window2.id);
-        match multi_window.add(root_window, &mut ac, &event_loop) {
-            Err(e) => {
-                println!("Failed to create main window {:?}", e);
+            ac.popup_windows.insert(root_window2.id);
+            match multi_window.add(root_window, &mut ac, &event_loop) {
+                Err(e) => {
+                    println!("Failed to create main window {:?}", e);
+                }
+                _ => {}
             }
-            _ => {}
-        }
-        match multi_window.add(root_window2, &mut ac, &event_loop) {
-            Err(e) => {
-                println!("Failed to create popup window {:?}", e);
+            match multi_window.add(root_window2, &mut ac, &event_loop) {
+                Err(e) => {
+                    println!("Failed to create popup window {:?}", e);
+                }
+                _ => {}
             }
-            _ => {}
-        }
-        ac
-    });
+            ac
+        },
+    );
 }

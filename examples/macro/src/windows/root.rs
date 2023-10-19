@@ -1,9 +1,9 @@
-use egui_multiwin::egui::FontId;
-use egui_multiwin::egui_glow::EguiGlow;
 use crate::egui_multiwin_dynamic::{
     multi_window::NewWindowRequest,
     tracked_window::{RedrawResponse, TrackedWindow},
 };
+use egui_multiwin::egui::FontId;
+use egui_multiwin::egui_glow::EguiGlow;
 
 use crate::{AppCommon, CustomEvent};
 
@@ -102,8 +102,7 @@ impl TrackedWindow for RootWindow {
         egui_multiwin::egui::CentralPanel::default().show(&egui.egui_ctx, |ui| {
             ui.label(format!("The fps is {}", self.fps.unwrap()));
             ui.heading(format!("number {}", c.clicks));
-            let t =
-                egui_multiwin::egui::widget_text::RichText::new("Example custom font text");
+            let t = egui_multiwin::egui::widget_text::RichText::new("Example custom font text");
             let t = t.font(FontId {
                 size: 12.0,
                 family: egui_multiwin::egui::FontFamily::Name("computermodern".into()),
