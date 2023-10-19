@@ -8,9 +8,8 @@ pub mod egui_multiwin_dynamic {
         use std::num::NonZeroU32;
         use std::{mem, sync::Arc};
 
-        use super::multi_window::{DefaultCustomEvent, NewWindowRequest};
+        use super::multi_window::NewWindowRequest;
 
-        use egui_multiwin::multi_window::EventTrait;
         use egui_multiwin::raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle};
         use egui_multiwin::egui::{NumExt, self};
         use egui_multiwin::egui_glow::{glow, self};
@@ -459,26 +458,17 @@ pub mod egui_multiwin_dynamic {
         use egui_multiwin::{winit::{
             event_loop::{ControlFlow, EventLoop},
             window::WindowId, self,
-        }, multi_window::EventTrait, tracked_window::TrackedWindowOptions};
+        }, tracked_window::TrackedWindowOptions};
 
         use super::tracked_window::{
             DisplayCreationError, TrackedWindow, TrackedWindowContainer,
         };
 
-        /// The default provided struct for custom events. This is used when custom events are not desired in the user program.
-        pub struct DefaultCustomEvent {}
-
-        impl EventTrait for DefaultCustomEvent {
-            fn window_id(&self) -> Option<WindowId> {
-                None
-            }
-        }
-
         /// This trait allows for non-window specific events to be sent to the event loop.
         /// It allows for non-gui threads or code to interact with the gui through the common struct
-        pub trait CommonEventHandler<T, U: EventTrait = DefaultCustomEvent> {
+        pub trait CommonEventHandler {
             /// Process non-window specific events for the application
-            fn process_event(&mut self, _event: U) -> Vec<NewWindowRequest> {
+            fn process_event(&mut self, _event: crate::CustomEvent) -> Vec<NewWindowRequest> {
                 vec![]
             }
         }
@@ -698,10 +688,8 @@ pub mod egui_multiwin_dynamic {
     }
 }
 
-use egui_multiwin::{
-    multi_window::EventTrait,
-    winit::{event_loop::EventLoopProxy, window::WindowId},
-};
+use egui_multiwin::
+    winit::{event_loop::EventLoopProxy, window::WindowId};
 
 use egui_multiwin_dynamic::multi_window::{CommonEventHandler, MultiWindow};
 
@@ -727,13 +715,13 @@ pub struct CustomEvent {
     message: u32,
 }
 
-impl EventTrait for CustomEvent {
+impl CustomEvent {
     fn window_id(&self) -> Option<WindowId> {
         self.window
     }
 }
 
-impl CommonEventHandler<AppCommon, CustomEvent> for AppCommon {
+impl CommonEventHandler for AppCommon {
     fn process_event(
         &mut self,
         event: CustomEvent,

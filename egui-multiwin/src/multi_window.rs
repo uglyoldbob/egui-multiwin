@@ -6,12 +6,6 @@ use winit::
     window::WindowId
 ;
 
-/// This trait is to be implemented on custom window events
-pub trait EventTrait {
-    /// Returns a Some when the event is for a particular window, returns None when the event is not for a particular window
-    fn window_id(&self) -> Option<WindowId>;
-}
-
 lazy_static::lazy_static! {
     static ref WINDOW_REQUEST_ID: Mutex<u32> = Mutex::new(0u32);
     /// The table that is used to obtain window ids

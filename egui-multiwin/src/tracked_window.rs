@@ -4,8 +4,6 @@ use std::collections::HashMap;
 use std::num::NonZeroU32;
 use std::{mem, sync::Arc};
 
-use crate::multi_window::EventTrait;
-
 use egui::NumExt;
 use egui_glow::glow;
 use egui_glow::EguiGlow;
