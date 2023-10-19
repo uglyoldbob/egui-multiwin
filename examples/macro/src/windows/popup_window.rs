@@ -1,7 +1,7 @@
 //! This is an example of a popup window. It is likely very crude on the opengl_after function and could probably be optimized
-use crate::egui_multiwin::egui_glow::glow;
-use crate::egui_multiwin::egui_glow::EguiGlow;
-use crate::egui_multiwin::{
+use egui_multiwin::egui_glow::glow;
+use egui_multiwin::egui_glow::EguiGlow;
+use crate::egui_multiwin_dynamic::{
     multi_window::NewWindowRequest,
     tracked_window::{RedrawResponse, TrackedWindow},
 };
@@ -16,21 +16,21 @@ pub struct PopupWindow {
 
 impl PopupWindow {
     pub fn request(label: String) -> NewWindowRequest {
-        let id = crate::egui_multiwin::multi_window::new_id();
+        let id = egui_multiwin::multi_window::new_id();
         NewWindowRequest {
             window_state: super::MyWindows::Popup(PopupWindow {
                 clicks: 0,
                 input: label.clone(),
                 id,
             }),
-            builder: crate::egui_multiwin::winit::window::WindowBuilder::new()
+            builder: egui_multiwin::winit::window::WindowBuilder::new()
                 .with_resizable(false)
-                .with_inner_size(crate::egui_multiwin::winit::dpi::LogicalSize {
+                .with_inner_size(egui_multiwin::winit::dpi::LogicalSize {
                     width: 400.0,
                     height: 200.0,
                 })
                 .with_title(label),
-            options: crate::egui_multiwin::tracked_window::TrackedWindowOptions {
+            options: egui_multiwin::tracked_window::TrackedWindowOptions {
                 vsync: true,
                 shader: None,
             },
@@ -43,10 +43,10 @@ impl TrackedWindow for PopupWindow {
     unsafe fn opengl_after(
         &mut self,
         _c: &mut AppCommon,
-        gl: &std::sync::Arc<crate::egui_multiwin::egui_glow::painter::Context>,
+        gl: &std::sync::Arc<egui_multiwin::egui_glow::painter::Context>,
     ) {
         use glow::HasContext;
-        let shader_version = crate::egui_multiwin::egui_glow::ShaderVersion::get(gl);
+        let shader_version = egui_multiwin::egui_glow::ShaderVersion::get(gl);
         let vertex_array = gl
             .create_vertex_array()
             .expect("Cannot create vertex array");
@@ -123,8 +123,8 @@ impl TrackedWindow for PopupWindow {
         event: &CustomEvent,
         _c: &mut AppCommon,
         _egui: &mut EguiGlow,
-        _window: &crate::egui_multiwin::winit::window::Window,
-        _clipboard: &mut crate::egui_multiwin::arboard::Clipboard,
+        _window: &egui_multiwin::winit::window::Window,
+        _clipboard: &mut egui_multiwin::arboard::Clipboard,
     ) -> RedrawResponse {
         println!(
             "Popup window {} received an event {}",
@@ -140,26 +140,26 @@ impl TrackedWindow for PopupWindow {
         &mut self,
         c: &mut AppCommon,
         egui: &mut EguiGlow,
-        window: &crate::egui_multiwin::winit::window::Window,
-        _clipboard: &mut crate::egui_multiwin::arboard::Clipboard,
+        window: &egui_multiwin::winit::window::Window,
+        _clipboard: &mut egui_multiwin::arboard::Clipboard,
     ) -> RedrawResponse {
         let mut quit = false;
 
-        crate::egui_multiwin::egui::CentralPanel::default().show(&egui.egui_ctx, |ui| {
+        egui_multiwin::egui::CentralPanel::default().show(&egui.egui_ctx, |ui| {
             if ui.button("Increment").clicked() {
                 c.clicks += 1;
                 self.clicks += 1;
                 window.set_title(&format!("Title update {}", c.clicks));
             }
             ui.label(format!("I have been clicked {} times", self.clicks));
-            let response = ui.add(crate::egui_multiwin::egui::TextEdit::singleline(
+            let response = ui.add(egui_multiwin::egui::TextEdit::singleline(
                 &mut self.input,
             ));
             if response.changed() {
                 // …
             }
             if response.lost_focus()
-                && ui.input(|i| i.key_pressed(crate::egui_multiwin::egui::Key::Enter))
+                && ui.input(|i| i.key_pressed(egui_multiwin::egui::Key::Enter))
             {
                 // …
             }

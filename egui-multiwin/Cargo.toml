@@ -16,6 +16,7 @@ serde = ["egui/serde"]
 arboard = "3.2.1"
 egui = "0.23"
 egui_glow = { version = "0.23", features = ["winit", "links"]}
+enum_dispatch = "0.3.12"
 winit = "0.28.7"
 glutin = "0.30.10"
 lazy_static = "1.4.0"

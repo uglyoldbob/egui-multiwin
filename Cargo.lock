@@ -355,6 +355,7 @@ dependencies = [
  "arboard",
  "egui",
  "egui_glow",
+ "enum_dispatch",
  "glutin",
  "lazy_static",
  "raw-window-handle",
@@ -813,15 +814,8 @@ dependencies = [
 name = "multiwin-demo6"
 version = "0.1.0"
 dependencies = [
- "arboard",
- "egui",
- "egui_glow",
+ "egui-multiwin",
  "enum_dispatch",
- "glutin",
- "lazy_static",
- "raw-window-handle",
- "thiserror",
- "winit",
 ]
 
 [[package]]
