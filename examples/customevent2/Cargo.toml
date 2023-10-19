@@ -1,5 +1,5 @@
 [package]
-name = "multiwin-demo"
+name = "multiwin-demo5"
 version = "0.1.0"
 edition = "2018"
 publish = ["crates-io"]

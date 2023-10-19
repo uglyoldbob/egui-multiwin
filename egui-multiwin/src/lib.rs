@@ -23,11 +23,23 @@
 //! pub struct AppCommon {
 //!     clicks: u32,
 //! }
+//! 
+//! #[derive(Debug)]
+//! pub struct CustomEvent {
+//!     window: Option<winit::window::WindowId>,
+//!     message: u32,
+//! }
+//! 
+//! impl egui_multiwin::multi_window::EventTrait for CustomEvent {
+//!     fn window_id(&self) -> Option<winit::window::WindowId> {
+//!         self.window
+//!     }
+//! }
 //!
 //! pub struct PopupWindow { }
 //!
 //! impl PopupWindow {
-//!     pub fn request() -> NewWindowRequest<AppCommon> {
+//!     pub fn request() -> NewWindowRequest<AppCommon, CustomEvent> {
 //!        NewWindowRequest {
 //!            window_state: Box::new(PopupWindow {
 //!            }),
@@ -42,11 +54,12 @@
 //!                vsync: false,
 //!                shader: None,
 //!            },
+//!            id: egui_multiwin::multi_window::new_id(),
 //!        }
 //!    }
 //! }
 //!
-//! impl TrackedWindow<AppCommon> for PopupWindow {
+//! impl TrackedWindow<AppCommon, CustomEvent> for PopupWindow {
 //!     fn is_root(&self) -> bool {
 //!         true
 //!     }
@@ -56,7 +69,8 @@
 //!         c: &mut AppCommon,
 //!         egui: &mut EguiGlow,
 //!         window: &egui_multiwin::winit::window::Window,
-//!         ) -> RedrawResponse<AppCommon> {
+//!         _clipboard: &mut arboard::Clipboard,
+//!         ) -> RedrawResponse<AppCommon, CustomEvent> {
 //!         let quit = false;
 //!         todo!();
 //!         RedrawResponse {
@@ -66,14 +80,13 @@
 //!     }
 //! }
 //!
-//! impl egui_multiwin::multi_window::CommonEventHandler<AppCommon, u32> for AppCommon {
+//! impl egui_multiwin::multi_window::CommonEventHandler<AppCommon, CustomEvent> for AppCommon {
 //!
-//!     fn process_event(&mut self, event: u32) -> Vec<egui_multiwin::multi_window::NewWindowRequest<AppCommon>> {
+//!     fn process_event(&mut self, event: CustomEvent) -> Vec<egui_multiwin::multi_window::NewWindowRequest<AppCommon, CustomEvent>> {
 //!         let mut windows_to_create = vec![];
-//!         println!("Received an event {}", event);
-//!         match event {
-//!             42 => windows_to_create.push(PopupWindow::request()),
-//!             _ => {}
+//!         println!("Received an event {:?}", event);
+//!         if event.message == 42 {
+//!             windows_to_create.push(PopupWindow::request());
 //!         }
 //!         windows_to_create
 //!     }

@@ -62,19 +62,33 @@ impl<T: 'static + CommonEventHandler<T, U>, U: EventTrait + 'static> MultiWindow
         }
     }
 
+    /// A simpler way to start up a user application. The provided closure should initialize the root window, add any fonts desired, store the proxy if it is needed, and return the common app struct.
+    pub fn start(
+        t: impl FnOnce(&mut Self, &EventLoop<U>, winit::event_loop::EventLoopProxy<U>) -> T,
+    ) {
+        let mut event_loop = winit::event_loop::EventLoopBuilder::with_user_event();
+        let event_loop = event_loop.build();
+        let proxy = event_loop.create_proxy();
+        let mut multi_window = Self::new();
+
+        let ac = t(&mut multi_window, &event_loop, proxy);
+
+        multi_window.run(event_loop, ac);
+    }
+
     /// Add a font that is applied to every window. Be sure to call this before calling [add](crate::multi_window::MultiWindow::add)
     /// multi_window is an instance of [MultiWindow<T,U>](crate::multi_window::MultiWindow<T,U>), DATA is a static `&[u8]` - most like defined with a `include_bytes!()` macro
     /// ```
     /// use egui_multiwin::multi_window::NewWindowRequest;
     /// struct Custom {}
-    ///
-    /// impl egui_multiwin::multi_window::CommonEventHandler<Custom, u32> for Custom {
-    ///     fn process_event(&mut self, _event: u32)  -> Vec<NewWindowRequest<Custom>>{
+    /// 
+    /// impl egui_multiwin::multi_window::CommonEventHandler<Custom> for Custom {
+    ///     fn process_event(&mut self, _event: egui_multiwin::multi_window::DefaultCustomEvent)  -> Vec<NewWindowRequest<Custom>>{
     ///         vec!()
     ///     }
     /// }
     ///
-    /// let mut multi_window: egui_multiwin::multi_window::MultiWindow<Custom, u32> = egui_multiwin::multi_window::MultiWindow::new();
+    /// let mut multi_window: egui_multiwin::multi_window::MultiWindow<Custom> = egui_multiwin::multi_window::MultiWindow::new();
     /// let DATA = include_bytes!("cmunbtl.ttf");
     /// multi_window.add_font("my_font".to_string(), egui_multiwin::egui::FontData::from_static(DATA));
     /// ```

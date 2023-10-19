@@ -202,7 +202,9 @@ fn handle_event<COMMON, U: EventTrait>(
         } else if full_output.repaint_after.is_zero() {
             gl_window.window.request_redraw();
             control_flow = winit::event_loop::ControlFlow::Poll;
-        } else if full_output.repaint_after.as_millis() > 0 && full_output.repaint_after.as_millis() < 10000 {
+        } else if full_output.repaint_after.as_millis() > 0
+            && full_output.repaint_after.as_millis() < 10000
+        {
             control_flow = winit::event_loop::ControlFlow::WaitUntil(
                 std::time::Instant::now() + full_output.repaint_after,
             );
@@ -245,7 +247,9 @@ fn handle_event<COMMON, U: EventTrait>(
         // See: https://github.com/rust-windowing/winit/issues/1619
         winit::event::Event::RedrawEventsCleared if cfg!(windows) => Some(redraw()),
         winit::event::Event::RedrawRequested(_) if !cfg!(windows) => Some(redraw()),
-        winit::event::Event::UserEvent(ue) => Some(s.custom_event(ue, c, egui, &gl_window.window, clipboard)),
+        winit::event::Event::UserEvent(ue) => {
+            Some(s.custom_event(ue, c, egui, &gl_window.window, clipboard))
+        }
 
         winit::event::Event::WindowEvent { event, .. } => {
             if let winit::event::WindowEvent::Resized(physical_size) = event {
@@ -341,9 +345,9 @@ impl<T, U: EventTrait> TrackedWindowContainer<T, U> {
         let display = unsafe { glutin::display::Display::new(rdh, pref) };
         if let Ok(display) = display {
             let configt = glutin::config::ConfigTemplateBuilder::default().build();
-            let mut configs : Vec<glutin::config::Config> = unsafe { display.find_configs(configt) }
-                .unwrap().collect();
-            configs.sort_by(|a,b| a.num_samples().cmp(&b.num_samples()));
+            let mut configs: Vec<glutin::config::Config> =
+                unsafe { display.find_configs(configt) }.unwrap().collect();
+            configs.sort_by(|a, b| a.num_samples().cmp(&b.num_samples()));
             // Try all configurations until one works
             for config in configs {
                 let sab: SurfaceAttributesBuilder<WindowSurface> =

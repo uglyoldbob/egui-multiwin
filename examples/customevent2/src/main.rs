@@ -54,42 +54,34 @@ impl CommonEventHandler<AppCommon, CustomEvent> for AppCommon {
 }
 
 fn main() {
-    let mut event_loop = egui_multiwin::winit::event_loop::EventLoopBuilder::with_user_event();
-    let event_loop = event_loop.build();
-    let proxy = event_loop.create_proxy();
-    if let Err(e) = proxy.send_event(CustomEvent {
-        window: None,
-        message: 41,
-    }) {
-        println!("Error sending non-window specific event: {:?}", e);
-    }
-    let mut multi_window: MultiWindow<AppCommon, CustomEvent> = MultiWindow::new();
-    multi_window.add_font(
-        "computermodern".to_string(),
-        egui_multiwin::egui::FontData::from_static(COMPUTER_MODERN_FONT),
-    );
-    let root_window = root::RootWindow::request();
-    let root_window2 = popup_window::PopupWindow::request("initial popup".to_string());
+    egui_multiwin::multi_window::MultiWindow::start(|multi_window, event_loop, proxy| {
+        multi_window.add_font(
+            "computermodern".to_string(),
+            egui_multiwin::egui::FontData::from_static(COMPUTER_MODERN_FONT),
+        );
+        let root_window = root::RootWindow::request();
+        let root_window2 = popup_window::PopupWindow::request("initial popup".to_string());
 
-    let mut ac = AppCommon {
-        clicks: 0,
-        root_window: root_window.id,
-        popup_windows: HashSet::new(),
-        sender: proxy,
-    };
+        let mut ac = AppCommon {
+            clicks: 0,
+            root_window: root_window.id,
+            popup_windows: HashSet::new(),
+            sender: proxy,
+        };
 
-    ac.popup_windows.insert(root_window2.id);
-    match multi_window.add(root_window, &mut ac, &event_loop) {
-        Err(e) => {
-            println!("Failed to create main window {:?}", e);
+        ac.popup_windows.insert(root_window2.id);
+        match multi_window.add(root_window, &mut ac, &event_loop) {
+            Err(e) => {
+                println!("Failed to create main window {:?}", e);
+            }
+            _ => {}
         }
-        _ => {}
-    }
-    match multi_window.add(root_window2, &mut ac, &event_loop) {
-        Err(e) => {
-            println!("Failed to create popup window {:?}", e);
+        match multi_window.add(root_window2, &mut ac, &event_loop) {
+            Err(e) => {
+                println!("Failed to create popup window {:?}", e);
+            }
+            _ => {}
         }
-        _ => {}
-    }
-    multi_window.run(event_loop, ac);
+        ac
+    });
 }

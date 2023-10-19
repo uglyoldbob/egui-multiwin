@@ -66,8 +66,7 @@ impl TrackedWindow<AppCommon> for RootWindow {
         let new_fps = 1_000_000_000.0 / delta.as_nanos() as f32;
         if let Some(fps) = &mut self.fps {
             *fps = (*fps * 0.95) + (0.05 * new_fps);
-        }
-        else {
+        } else {
             self.fps = Some(new_fps);
         }
 
