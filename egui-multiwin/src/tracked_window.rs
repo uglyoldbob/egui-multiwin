@@ -341,16 +341,11 @@ impl<T, U: EventTrait> TrackedWindowContainer<T, U> {
         let display = unsafe { glutin::display::Display::new(rdh, pref) };
         if let Ok(display) = display {
             let configt = glutin::config::ConfigTemplateBuilder::default().build();
-            let config = unsafe { display.find_configs(configt) }
-                .unwrap()
-                .reduce(|config, acc| {
-                    if config.num_samples() > acc.num_samples() {
-                        config
-                    } else {
-                        acc
-                    }
-                });
-            if let Some(config) = config {
+            let mut configs : Vec<glutin::config::Config> = unsafe { display.find_configs(configt) }
+                .unwrap().collect();
+            configs.sort_by(|a,b| a.num_samples().cmp(&b.num_samples()));
+            // Try all configurations until one works
+            for config in configs {
                 let sab: SurfaceAttributesBuilder<WindowSurface> =
                     glutin::surface::SurfaceAttributesBuilder::default();
                 let sa = sab.build(
@@ -358,25 +353,26 @@ impl<T, U: EventTrait> TrackedWindowContainer<T, U> {
                     std::num::NonZeroU32::new(winitwindow.inner_size().width).unwrap(),
                     std::num::NonZeroU32::new(winitwindow.inner_size().height).unwrap(),
                 );
-                let ws = unsafe { display.create_window_surface(&config, &sa).unwrap() };
+                let ws = unsafe { display.create_window_surface(&config, &sa) };
+                if let Ok(ws) = ws {
+                    let attr = glutin::context::ContextAttributesBuilder::new().build(Some(rwh));
 
-                let attr = glutin::context::ContextAttributesBuilder::new().build(Some(rwh));
+                    let gl_window = unsafe { display.create_context(&config, &attr) }.unwrap();
 
-                let gl_window = unsafe { display.create_context(&config, &attr).unwrap() };
-
-                return Ok(TrackedWindowContainer {
-                    window,
-                    gl_window: IndeterminateWindowedContext::NotCurrent(ContextHolder::new(
-                        gl_window,
-                        winitwindow,
-                        ws,
-                        display,
-                        *options,
-                    )),
-                    egui: None,
-                    shader: options.shader,
-                    _phantom: std::marker::PhantomData,
-                });
+                    return Ok(TrackedWindowContainer {
+                        window,
+                        gl_window: IndeterminateWindowedContext::NotCurrent(ContextHolder::new(
+                            gl_window,
+                            winitwindow,
+                            ws,
+                            display,
+                            *options,
+                        )),
+                        egui: None,
+                        shader: options.shader,
+                        _phantom: std::marker::PhantomData,
+                    });
+                }
             }
         }
         panic!("No window created");
