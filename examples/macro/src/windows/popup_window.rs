@@ -15,10 +15,10 @@ pub struct PopupWindow {
 }
 
 impl PopupWindow {
-    pub fn request(label: String) -> NewWindowRequest<AppCommon, CustomEvent> {
+    pub fn request(label: String) -> NewWindowRequest {
         let id = crate::egui_multiwin::multi_window::new_id();
         NewWindowRequest {
-            window_state: Box::new(PopupWindow {
+            window_state: super::MyWindows::Popup(PopupWindow {
                 clicks: 0,
                 input: label.clone(),
                 id,
@@ -39,7 +39,7 @@ impl PopupWindow {
     }
 }
 
-impl TrackedWindow<AppCommon, CustomEvent> for PopupWindow {
+impl TrackedWindow for PopupWindow {
     unsafe fn opengl_after(
         &mut self,
         _c: &mut AppCommon,
@@ -125,7 +125,7 @@ impl TrackedWindow<AppCommon, CustomEvent> for PopupWindow {
         _egui: &mut EguiGlow,
         _window: &crate::egui_multiwin::winit::window::Window,
         _clipboard: &mut crate::egui_multiwin::arboard::Clipboard,
-    ) -> RedrawResponse<AppCommon, CustomEvent> {
+    ) -> RedrawResponse {
         println!(
             "Popup window {} received an event {}",
             self.id, event.message
@@ -142,7 +142,7 @@ impl TrackedWindow<AppCommon, CustomEvent> for PopupWindow {
         egui: &mut EguiGlow,
         window: &crate::egui_multiwin::winit::window::Window,
         _clipboard: &mut crate::egui_multiwin::arboard::Clipboard,
-    ) -> RedrawResponse<AppCommon, CustomEvent> {
+    ) -> RedrawResponse {
         let mut quit = false;
 
         crate::egui_multiwin::egui::CentralPanel::default().show(&egui.egui_ctx, |ui| {

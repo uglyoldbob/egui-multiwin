@@ -12,14 +12,18 @@ use super::popup_window::PopupWindow;
 pub struct RootWindow {
     pub button_press_count: u32,
     pub num_popups_created: u32,
+    prev_time: std::time::Instant,
+    fps: Option<f32>,
 }
 
 impl RootWindow {
-    pub fn request() -> NewWindowRequest<AppCommon, CustomEvent> {
+    pub fn request() -> NewWindowRequest {
         NewWindowRequest {
-            window_state: Box::new(RootWindow {
+            window_state: super::MyWindows::Root(RootWindow {
                 button_press_count: 0,
                 num_popups_created: 0,
+                prev_time: std::time::Instant::now(),
+                fps: None,
             }),
             builder: crate::egui_multiwin::winit::window::WindowBuilder::new()
                 .with_resizable(true)
@@ -37,7 +41,7 @@ impl RootWindow {
     }
 }
 
-impl TrackedWindow<AppCommon, CustomEvent> for RootWindow {
+impl TrackedWindow for RootWindow {
     fn is_root(&self) -> bool {
         true
     }
@@ -49,7 +53,7 @@ impl TrackedWindow<AppCommon, CustomEvent> for RootWindow {
         _egui: &mut EguiGlow,
         _window: &crate::egui_multiwin::winit::window::Window,
         _clipboard: &mut crate::egui_multiwin::arboard::Clipboard,
-    ) -> RedrawResponse<AppCommon, CustomEvent> {
+    ) -> RedrawResponse {
         println!("Main window received an event {}", event.message);
         RedrawResponse {
             quit: false,
@@ -65,8 +69,21 @@ impl TrackedWindow<AppCommon, CustomEvent> for RootWindow {
         egui: &mut EguiGlow,
         _window: &crate::egui_multiwin::winit::window::Window,
         _clipboard: &mut crate::egui_multiwin::arboard::Clipboard,
-    ) -> RedrawResponse<AppCommon, CustomEvent> {
+    ) -> RedrawResponse {
         let mut quit = false;
+
+        egui.egui_ctx.request_repaint();
+
+        let cur_time = std::time::Instant::now();
+        let delta = cur_time.duration_since(self.prev_time);
+        self.prev_time = cur_time;
+
+        let new_fps = 1_000_000_000.0 / delta.as_nanos() as f32;
+        if let Some(fps) = &mut self.fps {
+            *fps = (*fps * 0.95) + (0.05 * new_fps);
+        } else {
+            self.fps = Some(new_fps);
+        }
 
         let mut windows_to_create = vec![];
 
@@ -83,6 +100,7 @@ impl TrackedWindow<AppCommon, CustomEvent> for RootWindow {
             }
         });
         crate::egui_multiwin::egui::CentralPanel::default().show(&egui.egui_ctx, |ui| {
+            ui.label(format!("The fps is {}", self.fps.unwrap()));
             ui.heading(format!("number {}", c.clicks));
             let t =
                 crate::egui_multiwin::egui::widget_text::RichText::new("Example custom font text");

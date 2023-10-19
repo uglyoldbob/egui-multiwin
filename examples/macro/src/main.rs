@@ -121,16 +121,17 @@ pub mod egui_multiwin {
         }
 
         /// The return value of the redraw function of trait `TrackedWindow<T>`
-        pub struct RedrawResponse<T, U = DefaultCustomEvent> {
+        pub struct RedrawResponse {
             /// Should the window exit?
             pub quit: bool,
             /// A list of windows that the window desires to have created.
-            pub new_windows: Vec<NewWindowRequest<T, U>>,
+            pub new_windows: Vec<NewWindowRequest>,
         }
 
         /// A window being tracked by a `MultiWindow`. All tracked windows will be forwarded all events
         /// received on the `MultiWindow`'s event loop.
-        pub trait TrackedWindow<T, U = DefaultCustomEvent> {
+        #[enum_dispatch::enum_dispatch]
+        pub trait TrackedWindow {
             /// Returns true if the window is a root window. Root windows will close all other windows when closed. Windows are not root windows by default.
             /// It is completely valid to have more than one root window open at the same time. The program will exit when all root windows are closed.
             fn is_root(&self) -> bool {
@@ -138,7 +139,7 @@ pub mod egui_multiwin {
             }
 
             /// Returns true when the window is allowed to close. Default is windows are always allowed to close. Override to change this behavior.
-            fn can_quit(&mut self, _c: &mut T) -> bool {
+            fn can_quit(&mut self, _c: &mut crate::AppCommon) -> bool {
                 true
             }
 
@@ -148,12 +149,12 @@ pub mod egui_multiwin {
             /// Handles a custom event sent specifically to this window.
             fn custom_event(
                 &mut self,
-                _event: &U,
-                _c: &mut T,
+                _event: &crate::CustomEvent,
+                _c: &mut crate::AppCommon,
                 _egui: &mut EguiGlow,
                 _window: &winit::window::Window,
                 _clipboard: &mut arboard::Clipboard,
-            ) -> RedrawResponse<T, U> {
+            ) -> RedrawResponse {
                 RedrawResponse {
                     quit: false,
                     new_windows: vec![],
@@ -163,36 +164,36 @@ pub mod egui_multiwin {
             /// Runs the redraw for the window. See RedrawResponse for the return value.
             fn redraw(
                 &mut self,
-                c: &mut T,
+                c: &mut crate::AppCommon,
                 egui: &mut EguiGlow,
                 window: &winit::window::Window,
                 clipboard: &mut arboard::Clipboard,
-            ) -> RedrawResponse<T, U>;
+            ) -> RedrawResponse;
             /// Allows opengl rendering to be done underneath all of the egui stuff of the window
             /// # Safety
             ///
             /// opengl functions are unsafe. This function would require calling opengl functions.
-            unsafe fn opengl_before(&mut self, _c: &mut T, _gl: &Arc<egui_glow::painter::Context>) {
+            unsafe fn opengl_before(&mut self, _c: &mut crate::AppCommon, _gl: &Arc<egui_glow::painter::Context>) {
             }
             /// Allows opengl rendering to be done on top of all of the egui stuff of the window
             /// # Safety
             ///
             /// opengl functions are unsafe. This function would require calling opengl functions.
-            unsafe fn opengl_after(&mut self, _c: &mut T, _gl: &Arc<egui_glow::painter::Context>) {}
+            unsafe fn opengl_after(&mut self, _c: &mut crate::AppCommon, _gl: &Arc<egui_glow::painter::Context>) {}
         }
 
         /// Handles one event from the event loop. Returns true if the window needs to be kept alive,
         /// otherwise it will be closed. Window events should be checked to ensure that their ID is one
         /// that the TrackedWindow is interested in.
-        fn handle_event<COMMON, U: EventTrait>(
-            s: &mut dyn TrackedWindow<COMMON, U>,
-            event: &winit::event::Event<U>,
-            c: &mut COMMON,
+        fn handle_event(
+            s: &mut crate::windows::MyWindows,
+            event: &winit::event::Event<crate::CustomEvent>,
+            c: &mut crate::AppCommon,
             egui: &mut EguiGlow,
             root_window_exists: bool,
             gl_window: &mut ContextHolder<PossiblyCurrentContext>,
             clipboard: &mut arboard::Clipboard,
-        ) -> TrackedWindowControl<COMMON, U> {
+        ) -> TrackedWindowControl {
             // Child window's requested control flow.
             let mut control_flow = ControlFlow::Wait; // Unless this changes, we're fine waiting until the next event comes in.
 
@@ -308,20 +309,20 @@ pub mod egui_multiwin {
 
         /// The main container for a window. Contains all required data for operating and maintaining a window.
         /// `T` is the type that represents the common app data, `U` is the type representing the message type
-        pub struct TrackedWindowContainer<T, U: EventTrait> {
+        pub struct TrackedWindowContainer {
             /// The context for the window
             pub gl_window: IndeterminateWindowedContext,
             /// The egui instance for this window, each window has a separate egui instance.
             pub egui: Option<EguiGlow>,
             /// The actual window
-            pub window: Box<dyn TrackedWindow<T, U>>,
+            pub window: crate::windows::MyWindows,
             /// The optional shader version for the window
             pub shader: Option<egui_glow::ShaderVersion>,
             /// Nothing, indicates that the type U is to be treated as if it exists.
-            _phantom: std::marker::PhantomData<U>,
+            _phantom: std::marker::PhantomData<crate::CustomEvent>,
         }
 
-        impl<T, U: EventTrait> TrackedWindowContainer<T, U> {
+        impl TrackedWindowContainer {
             /// Retrieve the window id for the container
             pub fn get_window_id(&self) -> Option<WindowId> {
                 match &self.gl_window {
@@ -336,11 +337,11 @@ pub mod egui_multiwin {
 
             /// Create a new window.
             pub fn create<TE>(
-                window: Box<dyn TrackedWindow<T, U>>,
+                window: crate::windows::MyWindows,
                 window_builder: winit::window::WindowBuilder,
                 event_loop: &winit::event_loop::EventLoopWindowTarget<TE>,
                 options: &TrackedWindowOptions,
-            ) -> Result<TrackedWindowContainer<T, U>, DisplayCreationError> {
+            ) -> Result<TrackedWindowContainer, DisplayCreationError> {
                 let rdh = event_loop.raw_display_handle();
                 let winitwindow = window_builder.build(event_loop).unwrap();
                 let rwh = winitwindow.raw_window_handle();
@@ -395,7 +396,7 @@ pub mod egui_multiwin {
             }
 
             /// Returns true if the specified event is for this window. A UserEvent (one generated by the EventLoopProxy) is not for any window.
-            pub fn is_event_for_window(&self, event: &winit::event::Event<U>) -> bool {
+            pub fn is_event_for_window(&self, event: &winit::event::Event<crate::CustomEvent>) -> bool {
                 // Check if the window ID matches, if not then this window can pass on the event.
                 match (event, &self.gl_window) {
                     (
@@ -438,13 +439,13 @@ pub mod egui_multiwin {
             /// The outer event handler for a window. Responsible for activating the context, creating the egui context if required, and calling handle_event.
             pub fn handle_event_outer(
                 &mut self,
-                c: &mut T,
-                event: &winit::event::Event<U>,
-                el: &EventLoopWindowTarget<U>,
+                c: &mut crate::AppCommon,
+                event: &winit::event::Event<crate::CustomEvent>,
+                el: &EventLoopWindowTarget<crate::CustomEvent>,
                 root_window_exists: bool,
                 fontmap: &HashMap<String, egui::FontData>,
                 clipboard: &mut arboard::Clipboard,
-            ) -> TrackedWindowControl<T, U> {
+            ) -> TrackedWindowControl {
                 // Activate this gl_window so we can use it.
                 // We cannot activate it without full ownership, so temporarily move the gl_window into the current scope.
                 // It *must* be returned at the end.
@@ -491,7 +492,7 @@ pub mod egui_multiwin {
                 let result = match self.egui.as_mut() {
                     Some(egui) => {
                         let result = handle_event(
-                            &mut *self.window,
+                            &mut self.window,
                             event,
                             c,
                             egui,
@@ -536,11 +537,11 @@ pub mod egui_multiwin {
         }
 
         /// The eventual return struct of the `TrackedWindow<T, U>` trait update function. Used internally for window management.
-        pub struct TrackedWindowControl<T, U = DefaultCustomEvent> {
+        pub struct TrackedWindowControl {
             /// Indicates how the window desires to respond to future events
             pub requested_control_flow: ControlFlow,
             /// A list of windows to be created
-            pub windows_to_create: Vec<NewWindowRequest<T, U>>,
+            pub windows_to_create: Vec<NewWindowRequest>,
         }
 
         #[derive(Error, Debug)]
@@ -575,7 +576,7 @@ pub mod egui_multiwin {
         /// It allows for non-gui threads or code to interact with the gui through the common struct
         pub trait CommonEventHandler<T, U: EventTrait = DefaultCustomEvent> {
             /// Process non-window specific events for the application
-            fn process_event(&mut self, _event: U) -> Vec<NewWindowRequest<T, U>> {
+            fn process_event(&mut self, _event: U) -> Vec<NewWindowRequest> {
                 vec![]
             }
         }
@@ -588,22 +589,22 @@ pub mod egui_multiwin {
 
         /// The main struct of the crate. Manages multiple `TrackedWindow`s by forwarding events to them.
         /// `T` represents the common data struct for the user program. `U` is the type representing custom events.
-        pub struct MultiWindow<T, U: EventTrait = DefaultCustomEvent> {
+        pub struct MultiWindow {
             /// The windows for the application.
-            windows: Vec<TrackedWindowContainer<T, U>>,
+            windows: Vec<TrackedWindowContainer>,
             /// A list of fonts to install on every egui instance
             fonts: HashMap<String, egui::FontData>,
             /// The clipboard
             clipboard: arboard::Clipboard,
         }
 
-        impl<T: 'static + CommonEventHandler<T, U>, U: EventTrait + 'static> Default for MultiWindow<T, U> {
+        impl Default for MultiWindow {
             fn default() -> Self {
                 Self::new()
             }
         }
 
-        impl<T: 'static + CommonEventHandler<T, U>, U: EventTrait + 'static> MultiWindow<T, U> {
+        impl MultiWindow {
             /// Creates a new `MultiWindow`.
             pub fn new() -> Self {
                 MultiWindow {
@@ -615,7 +616,7 @@ pub mod egui_multiwin {
 
             /// A simpler way to start up a user application. The provided closure should initialize the root window, add any fonts desired, store the proxy if it is needed, and return the common app struct.
             pub fn start(
-                t: impl FnOnce(&mut Self, &EventLoop<U>, winit::event_loop::EventLoopProxy<U>) -> T,
+                t: impl FnOnce(&mut Self, &EventLoop<crate::CustomEvent>, winit::event_loop::EventLoopProxy<crate::CustomEvent>) -> crate::AppCommon,
             ) {
                 let mut event_loop = winit::event_loop::EventLoopBuilder::with_user_event();
                 let event_loop = event_loop.build();
@@ -650,8 +651,8 @@ pub mod egui_multiwin {
             /// Adds a new `TrackedWindow` to the `MultiWindow`. If custom fonts are desired, call [add_font](crate::multi_window::MultiWindow::add_font) first.
             pub fn add<TE>(
                 &mut self,
-                window: NewWindowRequest<T, U>,
-                c: &mut T,
+                window: NewWindowRequest,
+                c: &mut crate::AppCommon,
                 event_loop: &winit::event_loop::EventLoopWindowTarget<TE>,
             ) -> Result<(), DisplayCreationError> {
                 let twc = TrackedWindowContainer::create::<TE>(
@@ -672,9 +673,9 @@ pub mod egui_multiwin {
             /// Process the given event for the applicable window(s)
             pub fn do_window_events(
                 &mut self,
-                c: &mut T,
-                event: &winit::event::Event<U>,
-                event_loop_window_target: &winit::event_loop::EventLoopWindowTarget<U>,
+                c: &mut crate::AppCommon,
+                event: &winit::event::Event<crate::CustomEvent>,
+                event_loop_window_target: &winit::event_loop::EventLoopWindowTarget<crate::CustomEvent>,
             ) -> Vec<ControlFlow> {
                 let mut handled_windows = vec![];
                 let mut window_control_flow = vec![];
@@ -727,7 +728,7 @@ pub mod egui_multiwin {
             }
 
             /// Runs the event loop until all `TrackedWindow`s are closed.
-            pub fn run(mut self, event_loop: EventLoop<U>, mut c: T) {
+            pub fn run(mut self, event_loop: EventLoop<crate::CustomEvent>, mut c: crate::AppCommon) {
                 event_loop.run(move |event, event_loop_window_target, flow| {
                     let c = &mut c;
                     //println!("handling event {:?}", event);
@@ -788,9 +789,9 @@ pub mod egui_multiwin {
         }
 
         /// A struct defining how a new window is to be created.
-        pub struct NewWindowRequest<T, U = DefaultCustomEvent> {
+        pub struct NewWindowRequest {
             /// The actual struct containing window data. The struct must implement the `TrackedWindow<T>` trait.
-            pub window_state: Box<dyn TrackedWindow<T, U>>,
+            pub window_state: crate::windows::MyWindows,
             /// Specifies how to build the window with a WindowBuilder
             pub builder: winit::window::WindowBuilder,
             /// Other options for the window.
@@ -868,7 +869,7 @@ impl CommonEventHandler<AppCommon, CustomEvent> for AppCommon {
     fn process_event(
         &mut self,
         event: CustomEvent,
-    ) -> Vec<egui_multiwin::multi_window::NewWindowRequest<AppCommon, CustomEvent>> {
+    ) -> Vec<egui_multiwin::multi_window::NewWindowRequest> {
         let mut windows = vec![];
         match event.message {
             42 => {
