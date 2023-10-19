@@ -41,7 +41,7 @@ pub mod egui_multiwin_dynamic {
 
         /// A window being tracked by a `MultiWindow`. All tracked windows will be forwarded all events
         /// received on the `MultiWindow`'s event loop.
-        #[enum_dispatch::enum_dispatch]
+        #[egui_multiwin::enum_dispatch::enum_dispatch]
         pub trait TrackedWindow {
             /// Returns true if the window is a root window. Root windows will close all other windows when closed. Windows are not root windows by default.
             /// It is completely valid to have more than one root window open at the same time. The program will exit when all root windows are closed.

@@ -815,7 +815,6 @@ name = "multiwin-demo6"
 version = "0.1.0"
 dependencies = [
  "egui-multiwin",
- "enum_dispatch",
 ]
 
 [[package]]
