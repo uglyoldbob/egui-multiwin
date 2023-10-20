@@ -7,12 +7,13 @@
 //! nice package. This crate makes some modifications to make it useful as an external crate by defining a few traits for users to implement on their
 //! custom structs.
 //!
-//! There is an example (<https://github.com/uglyoldbob/egui-multiwin/tree/master/example>) that shows how to use this crate in your project. It is named multiwin-demo and is in the examples folder.
+//! There are several examples (<https://github.com/uglyoldbob/egui-multiwin/tree/master/examples>) that show how to use this crate in your project.
+//! 
+//! The majority of the code is created by the pair of macros named [`multi_window`](macro.multi_window.html) and [`tracked_window`](macro.tracked_window.html)
 //!
-//! The main struct for this crate is [MultiWindow<T,U>](crate::multi_window::MultiWindow<T,U>)
+//! The main struct for this crate is defined by the [`multi_window`](macro.multi_window.html) macro.
 //!
-//! Generally you will create a struct for data that is common to all windows, implement the [ComonEventHandler<T,U>](crate::multi_window::CommonEventHandler<T,U>) trait on it.
-//! `T` is the name of your struct, and `U` and the name of the message you want to pass as a non-window specific event.
+//! Generally you will create a struct for data that is common to all windows, implement the `CommonEventHandler` trait on it.
 //!
 //! ```
 //! pub mod egui_multiwin_dynamic {

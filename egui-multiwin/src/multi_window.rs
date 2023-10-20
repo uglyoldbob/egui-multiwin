@@ -34,7 +34,8 @@ pub fn get_window_id(id: u32) -> Option<WindowId> {
     }
 }
 
-/// Create the dynamic tracked_window module for a egui_multiwin application
+/// Create the dynamic tracked_window module for a egui_multiwin application. Takes three arguments. First argument is the type name of the common data structure for your application.
+/// Second argument is the type for custom events (or egui_multiwin::NoEvent if that functionality is not desired). Third argument is the enum of all windows. It needs to be enum_dispatch.
 #[macro_export]
 macro_rules! tracked_window {
     ($common:ty,$event:ty, $window:ty) => {
@@ -509,7 +510,7 @@ macro_rules! tracked_window {
     };
 }
 
-/// This macro creates a dynamic definition of the multi_window module
+/// This macro creates a dynamic definition of the multi_window module. It has the same arguments as the [`tracked_window`](macro.tracked_window.html) macro.
 #[macro_export]
 macro_rules! multi_window {
     ($common:ty,$event:ty, $window:ty) => {
