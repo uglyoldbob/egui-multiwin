@@ -1,4 +1,4 @@
-use egui_multiwin_dynamic::multi_window::{CommonEventHandler, MultiWindow};
+use egui_multiwin_dynamic::multi_window::{MultiWindow, NewWindowRequest};
 
 pub mod egui_multiwin_dynamic {
     egui_multiwin::tracked_window!(
@@ -25,7 +25,11 @@ pub struct AppCommon {
     clicks: u32,
 }
 
-impl CommonEventHandler for AppCommon {}
+impl AppCommon {
+    fn process_event(&mut self, _event: egui_multiwin::NoEvent) -> Vec<NewWindowRequest> {
+        Vec::new()
+    }
+}
 
 fn main() {
     let mut event_loop = egui_multiwin::winit::event_loop::EventLoopBuilder::with_user_event();

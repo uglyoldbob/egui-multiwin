@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use egui_multiwin::winit::{event_loop::EventLoopProxy, window::WindowId};
 
-use egui_multiwin_dynamic::multi_window::{CommonEventHandler, MultiWindow, NewWindowRequest};
+use egui_multiwin_dynamic::multi_window::{MultiWindow, NewWindowRequest};
 
 pub mod egui_multiwin_dynamic {
     egui_multiwin::tracked_window!(
@@ -45,7 +45,7 @@ impl CustomEvent {
     }
 }
 
-impl CommonEventHandler for AppCommon {
+impl AppCommon {
     fn process_event(&mut self, event: CustomEvent) -> Vec<NewWindowRequest> {
         let mut windows = vec![];
         match event.message {

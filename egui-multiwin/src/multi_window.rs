@@ -63,7 +63,7 @@ macro_rules! tracked_window {
             };
             use egui_multiwin::{arboard, glutin, winit};
 
-            /// The return value of the redraw function of trait `TrackedWindow<T>`
+            /// The return value of the redraw function of trait `TrackedWindow`
             pub struct RedrawResponse {
                 /// Should the window exit?
                 pub quit: bool,
@@ -495,7 +495,7 @@ macro_rules! tracked_window {
                 None,
             }
 
-            /// The eventual return struct of the `TrackedWindow<T, U>` trait update function. Used internally for window management.
+            /// The eventual return struct of the `TrackedWindow` trait update function. Used internally for window management.
             pub struct TrackedWindowControl {
                 /// Indicates how the window desires to respond to future events
                 pub requested_control_flow: ControlFlow,
@@ -530,15 +530,6 @@ macro_rules! multi_window {
             use super::tracked_window::{
                 DisplayCreationError, TrackedWindow, TrackedWindowContainer,
             };
-
-            /// This trait allows for non-window specific events to be sent to the event loop.
-            /// It allows for non-gui threads or code to interact with the gui through the common struct
-            pub trait CommonEventHandler {
-                /// Process non-window specific events for the application
-                fn process_event(&mut self, _event: $event) -> Vec<NewWindowRequest> {
-                    vec![]
-                }
-            }
 
             /// The main struct of the crate. Manages multiple `TrackedWindow`s by forwarding events to them.
             /// `T` represents the common data struct for the user program. `U` is the type representing custom events.
@@ -587,18 +578,18 @@ macro_rules! multi_window {
                 }
 
                 /// Add a font that is applied to every window. Be sure to call this before calling [add](crate::multi_window::MultiWindow::add)
-                /// multi_window is an instance of [MultiWindow<T,U>](crate::multi_window::MultiWindow<T,U>), DATA is a static `&[u8]` - most like defined with a `include_bytes!()` macro
+                /// multi_window is an instance of [MultiWindow](crate::multi_window::MultiWindow), DATA is a static `&[u8]` - most like defined with a `include_bytes!()` macro
                 /// ```
                 /// use egui_multiwin::multi_window::NewWindowRequest;
                 /// struct Custom {}
                 ///
-                /// impl egui_multiwin::multi_window::CommonEventHandler<Custom> for Custom {
-                ///     fn process_event(&mut self, _event: egui_multiwin::multi_window::DefaultCustomEvent)  -> Vec<NewWindowRequest<Custom>>{
+                /// impl egui_multiwin::multi_window::CommonEventHandler for Custom {
+                ///     fn process_event(&mut self, _event: egui_multiwin::multi_window::DefaultCustomEvent)  -> Vec<NewWindowRequest>{
                 ///         vec!()
                 ///     }
                 /// }
                 ///
-                /// let mut multi_window: egui_multiwin::multi_window::MultiWindow<Custom> = egui_multiwin::multi_window::MultiWindow::new();
+                /// let mut multi_window: egui_multiwin::multi_window::MultiWindow = egui_multiwin::multi_window::MultiWindow::new();
                 /// let DATA = include_bytes!("cmunbtl.ttf");
                 /// multi_window.add_font("my_font".to_string(), egui_multiwin::egui::FontData::from_static(DATA));
                 /// ```
@@ -748,7 +739,7 @@ macro_rules! multi_window {
 
             /// A struct defining how a new window is to be created.
             pub struct NewWindowRequest {
-                /// The actual struct containing window data. The struct must implement the `TrackedWindow<T>` trait.
+                /// The actual struct containing window data. The struct must implement the `TrackedWindow` trait.
                 pub window_state: $window,
                 /// Specifies how to build the window with a WindowBuilder
                 pub builder: egui_multiwin::winit::window::WindowBuilder,

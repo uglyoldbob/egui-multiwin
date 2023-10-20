@@ -15,8 +15,6 @@ pub mod egui_multiwin_dynamic {
 
 use egui_multiwin::winit::{event_loop::EventLoopProxy, window::WindowId};
 
-use egui_multiwin_dynamic::multi_window::CommonEventHandler;
-
 mod windows;
 
 const COMPUTER_MODERN_FONT: &[u8] = include_bytes!("./cmunbtl.ttf");
@@ -45,7 +43,7 @@ impl CustomEvent {
     }
 }
 
-impl CommonEventHandler for AppCommon {
+impl AppCommon {
     fn process_event(
         &mut self,
         event: CustomEvent,

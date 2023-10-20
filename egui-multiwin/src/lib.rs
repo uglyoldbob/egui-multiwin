@@ -31,7 +31,6 @@
 //! use egui_multiwin::arboard;
 //! use egui_multiwin::egui_glow::EguiGlow;
 //! use egui_multiwin::enum_dispatch::enum_dispatch;
-//! use egui_multiwin_dynamic::multi_window::CommonEventHandler;
 //! use egui_multiwin_dynamic::multi_window::NewWindowRequest;
 //! use egui_multiwin_dynamic::tracked_window::RedrawResponse;
 //! use egui_multiwin_dynamic::tracked_window::TrackedWindow;
@@ -98,7 +97,7 @@
 //!     }
 //! }
 //! 
-//! impl CommonEventHandler for AppCommon {
+//! impl AppCommon {
 //!     fn process_event(&mut self, event: CustomEvent) -> Vec<NewWindowRequest> {
 //!         let mut windows_to_create = vec![];
 //!         println!("Received an event {:?}", event);
