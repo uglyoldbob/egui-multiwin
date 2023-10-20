@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 
 pub mod egui_multiwin_dynamic {
-    egui_multiwin::tracked_window!();
-    egui_multiwin::multi_window!();
+    egui_multiwin::tracked_window!(crate::AppCommon, crate::CustomEvent, crate::windows::MyWindows);
+    egui_multiwin::multi_window!(crate::AppCommon, crate::CustomEvent, crate::windows::MyWindows);
 }
 
 use egui_multiwin::winit::{event_loop::EventLoopProxy, window::WindowId};
