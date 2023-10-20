@@ -1,8 +1,16 @@
 use std::collections::HashSet;
 
 pub mod egui_multiwin_dynamic {
-    egui_multiwin::tracked_window!(crate::AppCommon, crate::CustomEvent, crate::windows::MyWindows);
-    egui_multiwin::multi_window!(crate::AppCommon, crate::CustomEvent, crate::windows::MyWindows);
+    egui_multiwin::tracked_window!(
+        crate::AppCommon,
+        crate::CustomEvent,
+        crate::windows::MyWindows
+    );
+    egui_multiwin::multi_window!(
+        crate::AppCommon,
+        crate::CustomEvent,
+        crate::windows::MyWindows
+    );
 }
 
 use egui_multiwin::winit::{event_loop::EventLoopProxy, window::WindowId};
@@ -75,17 +83,11 @@ fn main() {
             };
 
             ac.popup_windows.insert(root_window2.id);
-            match multi_window.add(root_window, &mut ac, &event_loop) {
-                Err(e) => {
-                    println!("Failed to create main window {:?}", e);
-                }
-                _ => {}
+            if let Err(e) = multi_window.add(root_window, &mut ac, event_loop) {
+                println!("Failed to create main window {:?}", e);
             }
-            match multi_window.add(root_window2, &mut ac, &event_loop) {
-                Err(e) => {
-                    println!("Failed to create popup window {:?}", e);
-                }
-                _ => {}
+            if let Err(e) = multi_window.add(root_window2, &mut ac, event_loop) {
+                println!("Failed to create popup window {:?}", e);
             }
             ac
         },
