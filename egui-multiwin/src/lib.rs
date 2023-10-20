@@ -15,74 +15,88 @@
 //! `T` is the name of your struct, and `U` and the name of the message you want to pass as a non-window specific event.
 //!
 //! ```
-//! use egui_multiwin::multi_window::NewWindowRequest;
-//! use egui_multiwin::tracked_window::RedrawResponse;
-//! use egui_multiwin::tracked_window::TrackedWindow;
-//! use egui_glow::EguiGlow;
-//!
+//! pub mod egui_multiwin_dynamic {
+//!     egui_multiwin::tracked_window!(crate::AppCommon, crate::CustomEvent, crate::MyWindows);
+//!     egui_multiwin::multi_window!(crate::AppCommon, crate::CustomEvent, crate::MyWindows);
+//! }
+//! 
+//! #[enum_dispatch(TrackedWindow)]
+//! pub enum MyWindows {
+//!     Popup(PopupWindow),
+//! }
+//! 
+//! use egui_multiwin::arboard;
+//! use egui_multiwin::egui_glow::EguiGlow;
+//! use egui_multiwin::enum_dispatch::enum_dispatch;
+//! use egui_multiwin_dynamic::multi_window::CommonEventHandler;
+//! use egui_multiwin_dynamic::multi_window::NewWindowRequest;
+//! use egui_multiwin_dynamic::tracked_window::RedrawResponse;
+//! use egui_multiwin_dynamic::tracked_window::TrackedWindow;
+//! use std::sync::Arc;
+//! 
 //! pub struct AppCommon {
 //!     clicks: u32,
 //! }
-//!
+//! 
 //! #[derive(Debug)]
 //! pub struct CustomEvent {
-//!     window: Option<winit::window::WindowId>,
+//!     window: Option<egui_multiwin::winit::window::WindowId>,
 //!     message: u32,
 //! }
-//!
-//! impl egui_multiwin::multi_window::EventTrait for CustomEvent {
-//!     fn window_id(&self) -> Option<winit::window::WindowId> {
+//! 
+//! impl CustomEvent {
+//!     fn window_id(&self) -> Option<egui_multiwin::winit::window::WindowId> {
 //!         self.window
 //!     }
 //! }
-//!
-//! pub struct PopupWindow { }
-//!
+//! 
+//! pub struct PopupWindow {}
+//! 
 //! impl PopupWindow {
-//!     pub fn request() -> NewWindowRequest<AppCommon, CustomEvent> {
-//!        NewWindowRequest {
-//!            window_state: Box::new(PopupWindow {
-//!            }),
-//!            builder: egui_multiwin::winit::window::WindowBuilder::new()
-//!                .with_resizable(false)
-//!                .with_inner_size(egui_multiwin::winit::dpi::LogicalSize {
-//!                    width: 400.0,
-//!                    height: 200.0,
-//!                })
-//!                .with_title("A window"),
-//!            options: egui_multiwin::tracked_window::TrackedWindowOptions {
-//!                vsync: false,
-//!                shader: None,
-//!            },
-//!            id: egui_multiwin::multi_window::new_id(),
-//!        }
-//!    }
+//!     pub fn request() -> NewWindowRequest {
+//!         NewWindowRequest {
+//!             window_state: MyWindows::Popup(PopupWindow {}),
+//!             builder: egui_multiwin::winit::window::WindowBuilder::new()
+//!                 .with_resizable(false)
+//!                 .with_inner_size(egui_multiwin::winit::dpi::LogicalSize {
+//!                     width: 400.0,
+//!                     height: 200.0,
+//!                 })
+//!                 .with_title("A window"),
+//!             options: egui_multiwin::tracked_window::TrackedWindowOptions {
+//!                 vsync: false,
+//!                 shader: None,
+//!             },
+//!             id: egui_multiwin::multi_window::new_id(),
+//!         }
+//!     }
 //! }
-//!
-//! impl TrackedWindow<AppCommon, CustomEvent> for PopupWindow {
+//! 
+//! impl TrackedWindow for PopupWindow {
 //!     fn is_root(&self) -> bool {
 //!         true
 //!     }
-//!
+//! 
 //!     fn redraw(
 //!         &mut self,
 //!         c: &mut AppCommon,
 //!         egui: &mut EguiGlow,
-//!         window: &egui_multiwin::winit::window::Window,
+//!         _window: &egui_multiwin::winit::window::Window,
 //!         _clipboard: &mut arboard::Clipboard,
-//!         ) -> RedrawResponse<AppCommon, CustomEvent> {
+//!     ) -> RedrawResponse {
 //!         let quit = false;
-//!         todo!();
+//!         egui_multiwin::egui::CentralPanel::default().show(&egui.egui_ctx, |ui| {
+//!             ui.heading(format!("number {}", c.clicks));
+//!         });
 //!         RedrawResponse {
 //!             quit,
 //!             new_windows: Vec::new(),
 //!         }
 //!     }
 //! }
-//!
-//! impl egui_multiwin::multi_window::CommonEventHandler<AppCommon, CustomEvent> for AppCommon {
-//!
-//!     fn process_event(&mut self, event: CustomEvent) -> Vec<egui_multiwin::multi_window::NewWindowRequest<AppCommon, CustomEvent>> {
+//! 
+//! impl CommonEventHandler for AppCommon {
+//!     fn process_event(&mut self, event: CustomEvent) -> Vec<NewWindowRequest> {
 //!         let mut windows_to_create = vec![];
 //!         println!("Received an event {:?}", event);
 //!         if event.message == 42 {
@@ -91,6 +105,20 @@
 //!         windows_to_create
 //!     }
 //! }
+//! 
+//! fn main() {
+//!     egui_multiwin_dynamic::multi_window::MultiWindow::start(|multi_window, event_loop, _proxy| {
+//!         let root_window = PopupWindow::request();
+//! 
+//!         let mut ac = AppCommon { clicks: 0 };
+//! 
+//!         if let Err(e) = multi_window.add(root_window, &mut ac, event_loop) {
+//!             println!("Failed to create main window {:?}", e);
+//!         }
+//!         ac
+//!     });
+//! }
+//! 
 //! ```
 //!
 //! Check github issues to see if wayland (linux) still has a problem with the clipboard. That issue should give a temporary solution to a segfault that
@@ -104,6 +132,18 @@
 #![deny(missing_docs)]
 #![deny(clippy::missing_docs_in_private_items)]
 
+use winit::window::WindowId;
+
 pub use {arboard, egui, egui_glow, enum_dispatch, glutin, raw_window_handle, thiserror, winit};
 pub mod multi_window;
 pub mod tracked_window;
+
+/// A generic non-event providing struct that users can use when they don't need custom events.
+pub struct NoEvent {}
+
+impl NoEvent {
+    /// Returns a None for window_id
+    pub fn window_id(&self) -> Option<WindowId> {
+        None
+    }
+}

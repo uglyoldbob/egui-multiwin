@@ -1,10 +1,10 @@
 //! This is an example of a popup window. It is likely very crude on the opengl_after function and could probably be optimized
-use egui_multiwin::egui_glow::glow;
-use egui_multiwin::egui_glow::EguiGlow;
-use egui_multiwin::{
+use crate::egui_multiwin_dynamic::{
     multi_window::NewWindowRequest,
     tracked_window::{RedrawResponse, TrackedWindow},
 };
+use egui_multiwin::egui_glow::glow;
+use egui_multiwin::egui_glow::EguiGlow;
 
 use crate::AppCommon;
 use crate::CustomEvent;
@@ -15,10 +15,10 @@ pub struct PopupWindow {
 }
 
 impl PopupWindow {
-    pub fn request(label: String) -> NewWindowRequest<AppCommon, CustomEvent> {
+    pub fn request(label: String) -> NewWindowRequest {
         let id = egui_multiwin::multi_window::new_id();
         NewWindowRequest {
-            window_state: Box::new(PopupWindow {
+            window_state: super::MyWindows::Popup(PopupWindow {
                 clicks: 0,
                 input: label.clone(),
                 id,
@@ -39,7 +39,7 @@ impl PopupWindow {
     }
 }
 
-impl TrackedWindow<AppCommon, CustomEvent> for PopupWindow {
+impl TrackedWindow for PopupWindow {
     unsafe fn opengl_after(
         &mut self,
         _c: &mut AppCommon,
@@ -125,7 +125,7 @@ impl TrackedWindow<AppCommon, CustomEvent> for PopupWindow {
         _egui: &mut EguiGlow,
         _window: &egui_multiwin::winit::window::Window,
         _clipboard: &mut egui_multiwin::arboard::Clipboard,
-    ) -> RedrawResponse<AppCommon, CustomEvent> {
+    ) -> RedrawResponse {
         println!(
             "Popup window {} received an event {}",
             self.id, event.message
@@ -142,7 +142,7 @@ impl TrackedWindow<AppCommon, CustomEvent> for PopupWindow {
         egui: &mut EguiGlow,
         window: &egui_multiwin::winit::window::Window,
         _clipboard: &mut egui_multiwin::arboard::Clipboard,
-    ) -> RedrawResponse<AppCommon, CustomEvent> {
+    ) -> RedrawResponse {
         let mut quit = false;
 
         egui_multiwin::egui::CentralPanel::default().show(&egui.egui_ctx, |ui| {

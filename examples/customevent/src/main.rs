@@ -1,9 +1,21 @@
 use std::collections::HashSet;
 
-use egui_multiwin::{
-    multi_window::{CommonEventHandler, EventTrait, MultiWindow},
-    winit::{event_loop::EventLoopProxy, window::WindowId},
-};
+use egui_multiwin::winit::{event_loop::EventLoopProxy, window::WindowId};
+
+use egui_multiwin_dynamic::multi_window::{CommonEventHandler, MultiWindow, NewWindowRequest};
+
+pub mod egui_multiwin_dynamic {
+    egui_multiwin::tracked_window!(
+        crate::AppCommon,
+        crate::CustomEvent,
+        crate::windows::MyWindows
+    );
+    egui_multiwin::multi_window!(
+        crate::AppCommon,
+        crate::CustomEvent,
+        crate::windows::MyWindows
+    );
+}
 
 mod windows;
 
@@ -27,17 +39,14 @@ pub struct CustomEvent {
     message: u32,
 }
 
-impl EventTrait for CustomEvent {
+impl CustomEvent {
     fn window_id(&self) -> Option<WindowId> {
         self.window
     }
 }
 
-impl CommonEventHandler<AppCommon, CustomEvent> for AppCommon {
-    fn process_event(
-        &mut self,
-        event: CustomEvent,
-    ) -> Vec<egui_multiwin::multi_window::NewWindowRequest<AppCommon, CustomEvent>> {
+impl CommonEventHandler for AppCommon {
+    fn process_event(&mut self, event: CustomEvent) -> Vec<NewWindowRequest> {
         let mut windows = vec![];
         match event.message {
             42 => {
@@ -63,7 +72,7 @@ fn main() {
     }) {
         println!("Error sending non-window specific event: {:?}", e);
     }
-    let mut multi_window: MultiWindow<AppCommon, CustomEvent> = MultiWindow::new();
+    let mut multi_window: MultiWindow = MultiWindow::new();
     multi_window.add_font(
         "computermodern".to_string(),
         egui_multiwin::egui::FontData::from_static(COMPUTER_MODERN_FONT),
@@ -79,17 +88,11 @@ fn main() {
     };
 
     ac.popup_windows.insert(root_window2.id);
-    match multi_window.add(root_window, &mut ac, &event_loop) {
-        Err(e) => {
-            println!("Failed to create main window {:?}", e);
-        }
-        _ => {}
+    if let Err(e) = multi_window.add(root_window, &mut ac, &event_loop) {
+        println!("Failed to create main window {:?}", e);
     }
-    match multi_window.add(root_window2, &mut ac, &event_loop) {
-        Err(e) => {
-            println!("Failed to create popup window {:?}", e);
-        }
-        _ => {}
+    if let Err(e) = multi_window.add(root_window2, &mut ac, &event_loop) {
+        println!("Failed to create popup window {:?}", e);
     }
     multi_window.run(event_loop, ac);
 }

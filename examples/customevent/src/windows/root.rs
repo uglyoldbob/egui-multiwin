@@ -1,9 +1,9 @@
-use egui_multiwin::egui::FontId;
-use egui_multiwin::egui_glow::EguiGlow;
-use egui_multiwin::{
+use crate::egui_multiwin_dynamic::{
     multi_window::NewWindowRequest,
     tracked_window::{RedrawResponse, TrackedWindow},
 };
+use egui_multiwin::egui::FontId;
+use egui_multiwin::egui_glow::EguiGlow;
 
 use crate::{AppCommon, CustomEvent};
 
@@ -15,9 +15,9 @@ pub struct RootWindow {
 }
 
 impl RootWindow {
-    pub fn request() -> NewWindowRequest<AppCommon, CustomEvent> {
+    pub fn request() -> NewWindowRequest {
         NewWindowRequest {
-            window_state: Box::new(RootWindow {
+            window_state: super::MyWindows::Root(RootWindow {
                 button_press_count: 0,
                 num_popups_created: 0,
             }),
@@ -37,7 +37,7 @@ impl RootWindow {
     }
 }
 
-impl TrackedWindow<AppCommon, CustomEvent> for RootWindow {
+impl TrackedWindow for RootWindow {
     fn is_root(&self) -> bool {
         true
     }
@@ -49,7 +49,7 @@ impl TrackedWindow<AppCommon, CustomEvent> for RootWindow {
         _egui: &mut EguiGlow,
         _window: &egui_multiwin::winit::window::Window,
         _clipboard: &mut egui_multiwin::arboard::Clipboard,
-    ) -> RedrawResponse<AppCommon, CustomEvent> {
+    ) -> RedrawResponse {
         println!("Main window received an event {}", event.message);
         RedrawResponse {
             quit: false,
@@ -65,7 +65,7 @@ impl TrackedWindow<AppCommon, CustomEvent> for RootWindow {
         egui: &mut EguiGlow,
         _window: &egui_multiwin::winit::window::Window,
         _clipboard: &mut egui_multiwin::arboard::Clipboard,
-    ) -> RedrawResponse<AppCommon, CustomEvent> {
+    ) -> RedrawResponse {
         let mut quit = false;
 
         let mut windows_to_create = vec![];

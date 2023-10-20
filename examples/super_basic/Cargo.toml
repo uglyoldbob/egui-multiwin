@@ -1,0 +1,8 @@
+[package]
+name = "multiwin-demo7"
+version = "0.1.0"
+edition = "2018"
+publish = ["crates-io"]
+
+[dependencies]
+egui-multiwin = { version = "0.2.2",  path = "../../egui-multiwin" }
