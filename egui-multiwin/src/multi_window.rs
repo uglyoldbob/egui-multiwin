@@ -62,6 +62,8 @@ macro_rules! tracked_window {
                 event_loop::{ControlFlow, EventLoopWindowTarget},
             };
             use egui_multiwin::{arboard, glutin, winit};
+            
+            use $window;
 
             /// The return value of the redraw function of trait `TrackedWindow`
             pub struct RedrawResponse {
