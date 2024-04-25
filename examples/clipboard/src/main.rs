@@ -33,7 +33,7 @@ impl AppCommon {
 
 fn main() {
     let mut event_loop = egui_multiwin::winit::event_loop::EventLoopBuilder::with_user_event();
-    let event_loop = event_loop.build();
+    let event_loop = event_loop.build().unwrap();
     let mut multi_window: MultiWindow = MultiWindow::new();
     multi_window.add_font(
         "computermodern".to_string(),

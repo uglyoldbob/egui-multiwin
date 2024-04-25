@@ -16,6 +16,14 @@ pub struct RootWindow {
     fps: Option<f32>,
 }
 
+impl core::hash::Hash for RootWindow {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.button_press_count.hash(state);
+        self.num_popups_created.hash(state);
+        self.prev_time.hash(state);
+    }
+}
+
 impl RootWindow {
     pub fn request() -> NewWindowRequest {
         NewWindowRequest {

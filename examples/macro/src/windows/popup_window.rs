@@ -8,6 +8,8 @@ use egui_multiwin::egui_glow::EguiGlow;
 
 use crate::AppCommon;
 use crate::CustomEvent;
+
+#[derive(Hash)]
 pub struct PopupWindow {
     clicks: u32,
     pub input: String,

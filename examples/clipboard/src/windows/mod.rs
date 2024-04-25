@@ -7,6 +7,7 @@ use std::sync::Arc;
 pub mod popup_window;
 pub mod root;
 
+#[derive(Hash)]
 #[enum_dispatch(TrackedWindow)]
 pub enum MyWindows {
     Root(root::RootWindow),

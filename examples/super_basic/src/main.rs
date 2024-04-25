@@ -3,6 +3,7 @@ pub mod egui_multiwin_dynamic {
     egui_multiwin::multi_window!(crate::AppCommon, crate::CustomEvent, crate::MyWindows);
 }
 
+#[derive(Hash)]
 #[enum_dispatch(TrackedWindow)]
 pub enum MyWindows {
     Popup(PopupWindow),
@@ -32,6 +33,7 @@ impl CustomEvent {
     }
 }
 
+#[derive(Hash)]
 pub struct PopupWindow {}
 
 impl PopupWindow {

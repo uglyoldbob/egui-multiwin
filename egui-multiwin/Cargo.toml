@@ -13,12 +13,13 @@ repository = "https://github.com/uglyoldbob/egui-multiwin"
 serde = ["egui/serde"]
 
 [dependencies]
-arboard = "3.2.1"
-egui = "0.23"
-egui_glow = { version = "0.23", features = ["winit", "links"]}
-enum_dispatch = "0.3.12"
-winit = "0.28.7"
-glutin = "0.30.10"
+arboard = "3.3.2"
+egui = "0.27.2"
+egui_glow = { version = "0.27.2", features = ["winit", "links"]}
+enum_dispatch = "0.3.13"
+winit = {version = "0.29.15", features = ["rwh_05"] }
+glutin = "0.31.3"
 lazy_static = "1.4.0"
-raw-window-handle = "0.5.2"
-thiserror = "1.0.40"
+raw-window-handle = "0.6"
+raw-window-handle-5 = { package = "raw-window-handle", version = "0.5.2" }
+thiserror = "1.0.59"

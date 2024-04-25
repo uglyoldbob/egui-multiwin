@@ -64,7 +64,7 @@ impl AppCommon {
 
 fn main() {
     let mut event_loop = egui_multiwin::winit::event_loop::EventLoopBuilder::with_user_event();
-    let event_loop = event_loop.build();
+    let event_loop = event_loop.build().unwrap();
     let proxy = event_loop.create_proxy();
     if let Err(e) = proxy.send_event(CustomEvent {
         window: None,

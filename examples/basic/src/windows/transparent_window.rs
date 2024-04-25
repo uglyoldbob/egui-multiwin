@@ -13,6 +13,12 @@ pub struct PopupWindow {
     pub input: String,
 }
 
+impl core::hash::Hash for PopupWindow {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.input.hash(state);
+    }
+}
+
 impl PopupWindow {
     pub fn request(label: String) -> NewWindowRequest {
         NewWindowRequest {

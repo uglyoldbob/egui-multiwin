@@ -54,7 +54,9 @@ macro_rules! tracked_window {
             use egui_multiwin::glutin::prelude::{GlConfig, GlDisplay};
             use egui_multiwin::glutin::surface::SurfaceAttributesBuilder;
             use egui_multiwin::glutin::surface::WindowSurface;
-            use egui_multiwin::raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle};
+            use egui_multiwin::raw_window_handle;
+            use egui_multiwin::raw_window_handle_5;
+            use egui_multiwin::raw_window_handle_5::{HasRawDisplayHandle, HasRawWindowHandle};
             use egui_multiwin::tracked_window::{ContextHolder, TrackedWindowOptions};
             use egui_multiwin::winit::window::WindowId;
             use egui_multiwin::winit::{
@@ -62,7 +64,7 @@ macro_rules! tracked_window {
                 event_loop::{ControlFlow, EventLoopWindowTarget},
             };
             use egui_multiwin::{arboard, glutin, winit};
-            
+
             use $window;
 
             /// The return value of the redraw function of trait `TrackedWindow`
@@ -76,7 +78,12 @@ macro_rules! tracked_window {
             /// A window being tracked by a `MultiWindow`. All tracked windows will be forwarded all events
             /// received on the `MultiWindow`'s event loop.
             #[egui_multiwin::enum_dispatch::enum_dispatch]
-            pub trait TrackedWindow {
+            pub trait TrackedWindow: core::hash::Hash {
+                /// Returns the viewport id of the window.
+                fn get_viewport_id(&self) -> egui_multiwin::egui::viewport::ViewportId {
+                    egui_multiwin::egui::viewport::ViewportId::from_hash_of(self)
+                }
+
                 /// Returns true if the window is a root window. Root windows will close all other windows when closed. Windows are not root windows by default.
                 /// It is completely valid to have more than one root window open at the same time. The program will exit when all root windows are closed.
                 fn is_root(&self) -> bool {
@@ -155,23 +162,26 @@ macro_rules! tracked_window {
 
                 let mut redraw = || {
                     let input = egui.egui_winit.take_egui_input(&gl_window.window);
-                    let ppp = input.pixels_per_point;
+                    let ppp = egui.egui_ctx.pixels_per_point();
                     egui.egui_ctx.begin_frame(input);
 
                     let rr = s.redraw(c, egui, &gl_window.window, clipboard);
 
                     let full_output = egui.egui_ctx.end_frame();
 
+                    let viewport_id = s.get_viewport_id();
+                    let repaint_delay = full_output
+                        .viewport_output
+                        .get(&viewport_id)
+                        .unwrap()
+                        .repaint_delay;
                     if rr.quit {
-                        control_flow = egui_multiwin::winit::event_loop::ControlFlow::Exit;
-                    } else if full_output.repaint_after.is_zero() {
+                    } else if repaint_delay.is_zero() {
                         gl_window.window.request_redraw();
                         control_flow = egui_multiwin::winit::event_loop::ControlFlow::Poll;
-                    } else if full_output.repaint_after.as_millis() > 0
-                        && full_output.repaint_after.as_millis() < 10000
-                    {
+                    } else if repaint_delay.as_millis() > 0 && repaint_delay.as_millis() < 10000 {
                         control_flow = egui_multiwin::winit::event_loop::ControlFlow::WaitUntil(
-                            std::time::Instant::now() + full_output.repaint_after,
+                            std::time::Instant::now() + repaint_delay,
                         );
                     } else {
                         control_flow = egui_multiwin::winit::event_loop::ControlFlow::Wait;
@@ -190,10 +200,10 @@ macro_rules! tracked_window {
                         // draw things behind egui here
                         unsafe { s.opengl_before(c, egui.painter.gl()) };
 
-                        let prim = egui.egui_ctx.tessellate(full_output.shapes);
+                        let prim = egui.egui_ctx.tessellate(full_output.shapes, ppp);
                         egui.painter.paint_and_update_textures(
                             gl_window.window.inner_size().into(),
-                            ppp.unwrap_or(1.0),
+                            ppp,
                             &prim[..],
                             &full_output.textures_delta,
                         );
@@ -207,15 +217,6 @@ macro_rules! tracked_window {
                 };
 
                 let response = match event {
-                    // Platform-dependent event handlers to workaround a winit bug
-                    // See: https://github.com/rust-windowing/winit/issues/987
-                    // See: https://github.com/rust-windowing/winit/issues/1619
-                    egui_multiwin::winit::event::Event::RedrawEventsCleared if cfg!(windows) => {
-                        Some(redraw())
-                    }
-                    egui_multiwin::winit::event::Event::RedrawRequested(_) if !cfg!(windows) => {
-                        Some(redraw())
-                    }
                     egui_multiwin::winit::event::Event::UserEvent(ue) => {
                         Some(s.custom_event(ue, c, egui, &gl_window.window, clipboard))
                     }
@@ -227,18 +228,16 @@ macro_rules! tracked_window {
                             gl_window.resize(*physical_size);
                         }
 
-                        if let egui_multiwin::winit::event::WindowEvent::CloseRequested = event {
-                            control_flow = egui_multiwin::winit::event_loop::ControlFlow::Exit;
-                        }
+                        if let egui_multiwin::winit::event::WindowEvent::CloseRequested = event {}
 
-                        let resp = egui.on_event(event);
+                        let resp = egui.on_window_event(&gl_window.window, event);
                         if resp.repaint {
                             gl_window.window.request_redraw();
                         }
 
                         None
                     }
-                    egui_multiwin::winit::event::Event::LoopDestroyed => {
+                    egui_multiwin::winit::event::Event::LoopExiting => {
                         egui.destroy();
                         None
                     }
@@ -246,9 +245,7 @@ macro_rules! tracked_window {
                     _ => None,
                 };
 
-                if !root_window_exists && !s.is_root() {
-                    control_flow = ControlFlow::Exit;
-                }
+                if !root_window_exists && !s.is_root() {}
 
                 TrackedWindowControl {
                     requested_control_flow: control_flow,
@@ -299,7 +296,7 @@ macro_rules! tracked_window {
                     let winitwindow = window_builder.build(event_loop).unwrap();
                     let rwh = winitwindow.raw_window_handle();
                     #[cfg(target_os = "windows")]
-                    let pref = glutin::display::DisplayApiPreference::Wgl(Some(rwh));
+                    let pref = glutin::display::DisplayApiPreference::Wgl(Some(wh));
                     #[cfg(target_os = "linux")]
                     let pref = egui_multiwin::glutin::display::DisplayApiPreference::Egl;
                     #[cfg(target_os = "macos")]
@@ -433,7 +430,7 @@ macro_rules! tracked_window {
                                 gl.enable(glow::FRAMEBUFFER_SRGB);
                             }
 
-                            let egui = egui_glow::EguiGlow::new(el, gl, self.shader);
+                            let egui = egui_glow::EguiGlow::new(el, gl, self.shader, Some(1.0));
                             {
                                 let mut fonts = egui::FontDefinitions::default();
                                 for (name, font) in fontmap {
@@ -461,12 +458,13 @@ macro_rules! tracked_window {
                                 &mut gl_window,
                                 clipboard,
                             );
-                            if let ControlFlow::Exit = result.requested_control_flow {
+                            /*
+                            if let todo!() = result.requested_control_flow {
                                 if self.window.can_quit(c) {
                                     // This window wants to go away. Close it.
                                     egui.destroy();
                                 }
-                            };
+                            }; */
                             result
                         }
                         _ => {
@@ -570,7 +568,7 @@ macro_rules! multi_window {
                 ) {
                     let mut event_loop =
                         egui_multiwin::winit::event_loop::EventLoopBuilder::with_user_event();
-                    let event_loop = event_loop.build();
+                    let event_loop = event_loop.build().unwrap();
                     let proxy = event_loop.create_proxy();
                     let mut multi_window = Self::new();
 
@@ -649,6 +647,7 @@ macro_rules! multi_window {
                                 &mut self.clipboard,
                             );
                             match window_control.requested_control_flow {
+                                /*
                                 ControlFlow::Exit => {
                                     //println!("window requested exit. Instead of sending the exit for everyone, just get rid of this one.");
                                     if window.window.can_quit(c) {
@@ -657,8 +656,9 @@ macro_rules! multi_window {
                                     } else {
                                         window_control_flow.push(ControlFlow::Wait);
                                     }
-                                    //*flow = ControlFlow::Exit
+                                    // *flow = ControlFlow::Exit
                                 }
+                                */
                                 requested_flow => {
                                     window_control_flow.push(requested_flow);
                                 }
@@ -680,7 +680,7 @@ macro_rules! multi_window {
 
                 /// Runs the event loop until all `TrackedWindow`s are closed.
                 pub fn run(mut self, event_loop: EventLoop<$event>, mut c: $common) {
-                    event_loop.run(move |event, event_loop_window_target, flow| {
+                    event_loop.run(move |event, event_loop_window_target| {
                         let c = &mut c;
                         //println!("handling event {:?}", event);
                         let window_try = if let winit::event::Event::UserEvent(uevent) = &event {
@@ -699,42 +699,34 @@ macro_rules! multi_window {
                             vec![ControlFlow::Poll]
                         };
 
+                        let mut flow = event_loop_window_target.control_flow();
                         // If any window requested polling, we should poll.
                         // Precedence: Poll > WaitUntil(smallest) > Wait.
-                        if let ControlFlow::Exit = *flow {
-                        } else {
-                            *flow = ControlFlow::Wait;
-                            for flow_request in window_control_flow {
-                                match flow_request {
-                                    ControlFlow::Poll => {
-                                        *flow = ControlFlow::Poll;
+                        flow = ControlFlow::Wait;
+                        for flow_request in window_control_flow {
+                            match flow_request {
+                                ControlFlow::Poll => {
+                                    flow = ControlFlow::Poll;
+                                }
+                                ControlFlow::Wait => (), // do nothing, if untouched it will be wait
+                                ControlFlow::WaitUntil(when_new) => {
+                                    if let ControlFlow::Poll = flow {
+                                        continue; // Polling takes precedence, so ignore this.
                                     }
-                                    ControlFlow::Wait => (), // do nothing, if untouched it will be wait
-                                    ControlFlow::WaitUntil(when_new) => {
-                                        if let ControlFlow::Poll = *flow {
-                                            continue; // Polling takes precedence, so ignore this.
-                                        }
 
-                                        // The current flow is already WaitUntil. If this one is sooner, use it instead.
-                                        if let ControlFlow::WaitUntil(when_current) = *flow {
-                                            if when_new < when_current {
-                                                *flow = ControlFlow::WaitUntil(when_new);
-                                            }
-                                        } else {
-                                            // The current flow is lower precedence, so replace it with this.
-                                            *flow = ControlFlow::WaitUntil(when_new);
+                                    // The current flow is already WaitUntil. If this one is sooner, use it instead.
+                                    if let ControlFlow::WaitUntil(when_current) = flow {
+                                        if when_new < when_current {
+                                            flow = ControlFlow::WaitUntil(when_new);
                                         }
+                                    } else {
+                                        // The current flow is lower precedence, so replace it with this.
+                                        flow = ControlFlow::WaitUntil(when_new);
                                     }
-                                    ControlFlow::Exit => (), // handle differently, only exit if all windows are gone?? what do about a closed root window
-                                    ControlFlow::ExitWithCode(_n) => (),
                                 }
                             }
                         }
-
-                        if self.windows.is_empty() {
-                            //println!("no more windows running, exiting event loop.");
-                            *flow = ControlFlow::Exit;
-                        }
+                        event_loop_window_target.set_control_flow(flow);
                     });
                 }
             }
