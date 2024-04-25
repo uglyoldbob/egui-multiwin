@@ -86,5 +86,6 @@ fn main() {
             println!("Failed to create popup window {:?}", e);
         }
         ac
-    });
+    })
+    .unwrap();
 }

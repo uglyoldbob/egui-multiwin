@@ -5,9 +5,7 @@ use std::num::NonZeroU32;
 use egui::NumExt;
 use glutin::context::{NotCurrentContext, PossiblyCurrentContext};
 use glutin::prelude::GlDisplay;
-use glutin::prelude::{
-    NotCurrentGlContextSurfaceAccessor, PossiblyCurrentContextGlSurfaceAccessor,
-};
+use glutin::prelude::{NotCurrentGlContext, PossiblyCurrentGlContext};
 use glutin::surface::GlSurface;
 use glutin::surface::WindowSurface;
 use thiserror::Error;

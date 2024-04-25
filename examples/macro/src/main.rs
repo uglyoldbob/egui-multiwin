@@ -89,5 +89,6 @@ fn main() {
             }
             ac
         },
-    );
+    )
+    .unwrap();
 }

@@ -98,5 +98,6 @@ fn main() {
             println!("Failed to create main window {:?}", e);
         }
         ac
-    });
+    })
+    .unwrap();
 }
