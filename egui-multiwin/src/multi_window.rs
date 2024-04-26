@@ -142,6 +142,7 @@ macro_rules! tracked_window {
             fn handle_event(
                 s: &mut $window,
                 event: &egui_multiwin::winit::event::Event<$event>,
+                el: &EventLoopWindowTarget<$event>,
                 c: &mut $common,
                 egui: &mut EguiGlow,
                 root_window_exists: bool,
@@ -158,9 +159,31 @@ macro_rules! tracked_window {
                     let ppp = egui.egui_ctx.pixels_per_point();
                     egui.egui_ctx.begin_frame(input);
 
-                    let rr = s.redraw(c, egui, &gl_window.window, clipboard);
+                    let mut rr = s.redraw(c, egui, &gl_window.window, clipboard);
 
                     let full_output = egui.egui_ctx.end_frame();
+
+                    for (viewport_id, viewport_output) in &full_output.viewport_output {
+                        let builder =
+                            egui_multiwin::egui_glow::egui_winit::create_winit_window_builder(
+                                &egui.egui_ctx,
+                                el,
+                                viewport_output.builder.to_owned(),
+                            );
+                        let options = TrackedWindowOptions {
+                            shader: None,
+                            vsync: false,
+                        };
+                        let vp = NewWindowRequest {
+                            builder,
+                            id: egui_multiwin::multi_window::new_id(),
+                            options,
+                            window_state: s.to_owned(),
+                            viewport: Some(viewport_output.builder.clone()),
+                        };
+                        rr.new_windows.push(vp);
+                    }
+
                     let viewportid = egui_multiwin::egui::viewport::ViewportId::ROOT;
                     let repaint_after = full_output
                         .viewport_output
@@ -456,6 +479,7 @@ macro_rules! tracked_window {
                             let result = handle_event(
                                 &mut self.window,
                                 event,
+                                el,
                                 c,
                                 egui,
                                 root_window_exists,
@@ -763,6 +787,8 @@ macro_rules! multi_window {
                 pub options: TrackedWindowOptions,
                 /// An id to allow a user program to translate window requests into actual window ids.
                 pub id: u32,
+                /// The viewport options
+                pub viewport: Option<egui_multiwin::egui::ViewportBuilder>,
             }
         }
     };

@@ -9,9 +9,11 @@ use crate::AppCommon;
 
 use super::popup_window::PopupWindow;
 
+#[derive(Clone)]
 pub struct RootWindow {
     pub button_press_count: u32,
     pub num_popups_created: u32,
+    summon_groot: bool,
     prev_time: std::time::Instant,
     fps: Option<f32>,
 }
@@ -22,6 +24,7 @@ impl RootWindow {
             window_state: super::MyWindows::Root(RootWindow {
                 button_press_count: 0,
                 num_popups_created: 0,
+                summon_groot: false,
                 prev_time: std::time::Instant::now(),
                 fps: None,
             }),
@@ -37,6 +40,7 @@ impl RootWindow {
                 shader: None,
             },
             id: egui_multiwin::multi_window::new_id(),
+            viewport: None,
         }
     }
 }
@@ -58,6 +62,7 @@ impl TrackedWindow for RootWindow {
         let mut quit = false;
 
         egui.egui_ctx.request_repaint();
+        egui.egui_ctx.set_embed_viewports(false);
 
         let cur_time = std::time::Instant::now();
         let delta = cur_time.duration_since(self.prev_time);
@@ -99,6 +104,20 @@ impl TrackedWindow for RootWindow {
                 family: egui_multiwin::egui::FontFamily::Name("computermodern".into()),
             });
             ui.label(t);
+            ui.checkbox(&mut self.summon_groot, "summon groot");
+            if self.summon_groot {
+                egui.egui_ctx.show_viewport_deferred(
+                    egui_multiwin::egui::viewport::ViewportId::from_hash_of("Testing"),
+                    egui_multiwin::egui::viewport::ViewportBuilder {
+                        ..Default::default()
+                    },
+                    |a, b| {
+                        egui_multiwin::egui::CentralPanel::default().show(a, |ui| {
+                            ui.label("I am groot");
+                        });
+                    },
+                );
+            }
         });
         RedrawResponse {
             quit,
