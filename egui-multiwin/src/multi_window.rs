@@ -293,6 +293,8 @@ macro_rules! tracked_window {
                 pub egui: Option<EguiGlow>,
                 /// The actual window
                 pub window: $window,
+                /// The viewports
+                pub viewports: todo!(),
                 /// The optional shader version for the window
                 pub shader: Option<egui_multiwin::egui_glow::ShaderVersion>,
                 /// Nothing, indicates that the type U is to be treated as if it exists.
