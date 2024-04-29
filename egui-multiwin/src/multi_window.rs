@@ -136,128 +136,158 @@ macro_rules! tracked_window {
                 }
             }
 
-            /// Handles one event from the event loop. Returns true if the window needs to be kept alive,
-            /// otherwise it will be closed. Window events should be checked to ensure that their ID is one
-            /// that the TrackedWindow is interested in.
-            fn handle_event(
-                s: &mut $window,
-                event: &egui_multiwin::winit::event::Event<$event>,
-                c: &mut $common,
-                egui: &mut EguiGlow,
-                root_window_exists: bool,
-                gl_window: &mut egui_multiwin::tracked_window::ContextHolder<
-                    PossiblyCurrentContext,
-                >,
-                clipboard: &mut egui_multiwin::arboard::Clipboard,
-            ) -> TrackedWindowControl {
-                // Child window's requested control flow.
-                let mut control_flow = Some(ControlFlow::Wait); // Unless this changes, we're fine waiting until the next event comes in.
+            /// Represents a fully instantiated window container
+            pub struct InstantiatedWindowContainer<'a> {
+                /// The context for the window
+                pub gl_window: &'a mut IndeterminateWindowedContext,
+                /// The egui instance for this window, each window has a separate egui instance.
+                pub egui: &'a mut EguiGlow,
+                /// The actual window
+                pub window: &'a mut $window,
+                /// The optional shader version for the window
+                pub shader: Option<egui_multiwin::egui_glow::ShaderVersion>,
+                /// Nothing, indicates that the type U is to be treated as if it exists.
+                _phantom: std::marker::PhantomData<$event>,
+            }
 
-                let mut redraw = || {
-                    let input = egui.egui_winit.take_egui_input(&gl_window.window);
-                    let ppp = egui.egui_ctx.pixels_per_point();
-                    egui.egui_ctx.begin_frame(input);
+            impl<'a> InstantiatedWindowContainer<'a> {
+                /// Handles one event from the event loop. Returns true if the window needs to be kept alive,
+                /// otherwise it will be closed. Window events should be checked to ensure that their ID is one
+                /// that the TrackedWindow is interested in.
+                fn handle_event(
+                    &mut self,
+                    event: &egui_multiwin::winit::event::Event<$event>,
+                    c: &mut $common,
+                    root_window_exists: bool,
+                    gl_window: &mut egui_multiwin::tracked_window::ContextHolder<
+                        PossiblyCurrentContext,
+                    >,
+                    clipboard: &mut egui_multiwin::arboard::Clipboard,
+                ) -> TrackedWindowControl {
+                    // Child window's requested control flow.
+                    let mut control_flow = Some(ControlFlow::Wait); // Unless this changes, we're fine waiting until the next event comes in.
 
-                    let rr = s.redraw(c, egui, &gl_window.window, clipboard);
+                    let mut redraw = || {
+                        let input = self.egui.egui_winit.take_egui_input(&gl_window.window);
+                        let ppp = self.egui.egui_ctx.pixels_per_point();
+                        self.egui.egui_ctx.begin_frame(input);
 
-                    let full_output = egui.egui_ctx.end_frame();
-                    let viewportid = egui_multiwin::egui::viewport::ViewportId::ROOT;
-                    let repaint_after = full_output
-                        .viewport_output
-                        .get(&viewportid)
-                        .unwrap()
-                        .repaint_delay;
+                        let rr = self
+                            .window
+                            .redraw(c, self.egui, &gl_window.window, clipboard);
 
-                    if rr.quit {
-                        control_flow = None;
-                    } else if repaint_after.is_zero() {
-                        gl_window.window.request_redraw();
-                        control_flow = Some(egui_multiwin::winit::event_loop::ControlFlow::Poll);
-                    } else if repaint_after.as_millis() > 0 && repaint_after.as_millis() < 10000 {
-                        control_flow =
-                            Some(egui_multiwin::winit::event_loop::ControlFlow::WaitUntil(
-                                std::time::Instant::now() + repaint_after,
-                            ));
-                    } else {
-                        control_flow = Some(egui_multiwin::winit::event_loop::ControlFlow::Wait);
+                        let full_output = self.egui.egui_ctx.end_frame();
+                        let viewportid = egui_multiwin::egui::viewport::ViewportId::ROOT;
+                        let repaint_after = full_output
+                            .viewport_output
+                            .get(&viewportid)
+                            .unwrap()
+                            .repaint_delay;
+
+                        if rr.quit {
+                            control_flow = None;
+                        } else if repaint_after.is_zero() {
+                            gl_window.window.request_redraw();
+                            control_flow =
+                                Some(egui_multiwin::winit::event_loop::ControlFlow::Poll);
+                        } else if repaint_after.as_millis() > 0 && repaint_after.as_millis() < 10000
+                        {
+                            control_flow =
+                                Some(egui_multiwin::winit::event_loop::ControlFlow::WaitUntil(
+                                    std::time::Instant::now() + repaint_after,
+                                ));
+                        } else {
+                            control_flow =
+                                Some(egui_multiwin::winit::event_loop::ControlFlow::Wait);
+                        };
+
+                        {
+                            let color = egui_multiwin::egui::Rgba::from_white_alpha(0.0);
+                            unsafe {
+                                use glow::HasContext as _;
+                                self.egui
+                                    .painter
+                                    .gl()
+                                    .clear_color(color[0], color[1], color[2], color[3]);
+                                self.egui.painter.gl().clear(glow::COLOR_BUFFER_BIT);
+                            }
+
+                            // draw things behind egui here
+                            unsafe { self.window.opengl_before(c, self.egui.painter.gl()) };
+
+                            let prim = self.egui.egui_ctx.tessellate(
+                                full_output.shapes,
+                                self.egui.egui_ctx.pixels_per_point(),
+                            );
+                            self.egui.painter.paint_and_update_textures(
+                                gl_window.window.inner_size().into(),
+                                ppp,
+                                &prim[..],
+                                &full_output.textures_delta,
+                            );
+
+                            // draw things on top of egui here
+                            unsafe { self.window.opengl_after(c, self.egui.painter.gl()) };
+
+                            gl_window.swap_buffers().unwrap();
+                        }
+                        rr
                     };
 
-                    {
-                        let color = egui_multiwin::egui::Rgba::from_white_alpha(0.0);
-                        unsafe {
-                            use glow::HasContext as _;
-                            egui.painter
-                                .gl()
-                                .clear_color(color[0], color[1], color[2], color[3]);
-                            egui.painter.gl().clear(glow::COLOR_BUFFER_BIT);
+                    let response = match event {
+                        egui_multiwin::winit::event::Event::UserEvent(ue) => {
+                            Some(self.window.custom_event(
+                                ue,
+                                c,
+                                self.egui,
+                                &gl_window.window,
+                                clipboard,
+                            ))
                         }
 
-                        // draw things behind egui here
-                        unsafe { s.opengl_before(c, egui.painter.gl()) };
-
-                        let prim = egui
-                            .egui_ctx
-                            .tessellate(full_output.shapes, egui.egui_ctx.pixels_per_point());
-                        egui.painter.paint_and_update_textures(
-                            gl_window.window.inner_size().into(),
-                            ppp,
-                            &prim[..],
-                            &full_output.textures_delta,
-                        );
-
-                        // draw things on top of egui here
-                        unsafe { s.opengl_after(c, egui.painter.gl()) };
-
-                        gl_window.swap_buffers().unwrap();
-                    }
-                    rr
-                };
-
-                let response = match event {
-                    egui_multiwin::winit::event::Event::UserEvent(ue) => {
-                        Some(s.custom_event(ue, c, egui, &gl_window.window, clipboard))
-                    }
-
-                    egui_multiwin::winit::event::Event::WindowEvent { event, .. } => {
-                        match event {
-                            egui_multiwin::winit::event::WindowEvent::Resized(physical_size) => {
-                                gl_window.resize(*physical_size);
+                        egui_multiwin::winit::event::Event::WindowEvent { event, .. } => {
+                            match event {
+                                egui_multiwin::winit::event::WindowEvent::Resized(
+                                    physical_size,
+                                ) => {
+                                    gl_window.resize(*physical_size);
+                                }
+                                egui_multiwin::winit::event::WindowEvent::CloseRequested => {
+                                    control_flow = None;
+                                }
+                                egui_multiwin::winit::event::WindowEvent::RedrawRequested => {
+                                    redraw();
+                                }
+                                _ => {}
                             }
-                            egui_multiwin::winit::event::WindowEvent::CloseRequested => {
-                                control_flow = None;
+
+                            let resp = self.egui.on_window_event(&gl_window.window, event);
+                            if resp.repaint {
+                                gl_window.window.request_redraw();
                             }
-                            egui_multiwin::winit::event::WindowEvent::RedrawRequested => {
-                                redraw();
-                            }
-                            _ => {}
+
+                            None
+                        }
+                        egui_multiwin::winit::event::Event::LoopExiting => {
+                            self.egui.destroy();
+                            None
                         }
 
-                        let resp = egui.on_window_event(&gl_window.window, event);
-                        if resp.repaint {
-                            gl_window.window.request_redraw();
-                        }
+                        _ => None,
+                    };
 
-                        None
-                    }
-                    egui_multiwin::winit::event::Event::LoopExiting => {
-                        egui.destroy();
-                        None
+                    if !root_window_exists && !self.window.is_root() {
+                        control_flow = None;
                     }
 
-                    _ => None,
-                };
-
-                if !root_window_exists && !s.is_root() {
-                    control_flow = None;
-                }
-
-                TrackedWindowControl {
-                    requested_control_flow: control_flow,
-                    windows_to_create: if let Some(a) = response {
-                        a.new_windows
-                    } else {
-                        Vec::new()
-                    },
+                    TrackedWindowControl {
+                        requested_control_flow: control_flow,
+                        windows_to_create: if let Some(a) = response {
+                            a.new_windows
+                        } else {
+                            Vec::new()
+                        },
+                    }
                 }
             }
 
@@ -277,6 +307,20 @@ macro_rules! tracked_window {
             }
 
             impl TrackedWindowContainer {
+                fn instantiate(&mut self) -> Result<InstantiatedWindowContainer, ()> {
+                    if let Some(egui) = self.egui.as_mut() {
+                        Ok(InstantiatedWindowContainer {
+                            gl_window: &mut self.gl_window,
+                            egui,
+                            window: &mut self.window,
+                            shader: self.shader,
+                            _phantom: std::marker::PhantomData,
+                        })
+                    } else {
+                        Err(())
+                    }
+                }
+
                 /// Retrieve the window id for the container
                 pub fn get_window_id(&self) -> Option<WindowId> {
                     match &self.gl_window {
@@ -451,27 +495,23 @@ macro_rules! tracked_window {
                         Some(_) => (),
                     };
 
-                    let result = match self.egui.as_mut() {
-                        Some(egui) => {
-                            let result = handle_event(
-                                &mut self.window,
-                                event,
-                                c,
-                                egui,
-                                root_window_exists,
-                                &mut gl_window,
-                                clipboard,
-                            );
-                            if result.requested_control_flow.is_none() {
-                                if self.window.can_quit(c) {
-                                    // This window wants to go away. Close it.
-                                    egui.destroy();
-                                }
-                            };
-                            result
-                        }
-                        _ => {
-                            panic!("Window wasn't fully initialized");
+                    let result = if let Ok(mut window) = self.instantiate() {
+                        let result = window.handle_event(
+                            event,
+                            c,
+                            root_window_exists,
+                            &mut gl_window,
+                            clipboard,
+                        );
+                        result
+                    } else {
+                        panic!("Window wasn't fully initialized");
+                    };
+
+                    if result.requested_control_flow.is_none() {
+                        if self.window.can_quit(c) {
+                            // This window wants to go away. Close it.
+                            self.egui.take();
                         }
                     };
 
