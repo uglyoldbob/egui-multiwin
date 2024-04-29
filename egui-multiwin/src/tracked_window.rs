@@ -42,6 +42,12 @@ impl<T> ContextHolder<T> {
         }
     }
 }
+impl<T> ContextHolder<T> {
+    /// Get the window handle
+    pub fn window(&self) -> &winit::window::Window {
+        &self.window
+    }
+}
 
 impl ContextHolder<PossiblyCurrentContext> {
     /// Call swap_buffers. linux targets have vsync specifically disabled because it causes problems with hidden windows.
@@ -49,7 +55,7 @@ impl ContextHolder<PossiblyCurrentContext> {
         if self.options.vsync {
             let _e = self.ws.set_swap_interval(
                 &self.context,
-                glutin::surface::SwapInterval::Wait(NonZeroU32::new(1).unwrap()),
+                glutin::surface::SwapInterval::Wait(NonZeroU32::MIN),
             );
         } else {
             let _e = self
@@ -107,16 +113,6 @@ pub struct TrackedWindowOptions {
     pub vsync: bool,
     /// Optionally sets the shader version for the window.
     pub shader: Option<egui_glow::ShaderVersion>,
-}
-
-/// Enum of the potential options for a window context
-pub enum IndeterminateWindowedContext {
-    /// The window context is possibly current
-    PossiblyCurrent(ContextHolder<PossiblyCurrentContext>),
-    /// The window context is not current
-    NotCurrent(ContextHolder<NotCurrentContext>),
-    /// The window context is empty
-    None,
 }
 
 #[derive(Error, Debug)]
