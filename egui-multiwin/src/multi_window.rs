@@ -246,6 +246,7 @@ macro_rules! tracked_window {
                         }
 
                         egui_multiwin::winit::event::Event::WindowEvent { event, .. } => {
+                            let mut response = None;
                             match event {
                                 egui_multiwin::winit::event::WindowEvent::Resized(
                                     physical_size,
@@ -256,7 +257,7 @@ macro_rules! tracked_window {
                                     control_flow = None;
                                 }
                                 egui_multiwin::winit::event::WindowEvent::RedrawRequested => {
-                                    redraw();
+                                    response = Some(redraw());
                                 }
                                 _ => {}
                             }
@@ -266,7 +267,7 @@ macro_rules! tracked_window {
                                 gl_window.window.request_redraw();
                             }
 
-                            None
+                            response
                         }
                         egui_multiwin::winit::event::Event::LoopExiting => {
                             self.egui.destroy();
