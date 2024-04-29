@@ -171,7 +171,6 @@ macro_rules! tracked_window {
                     let input = egui.egui_winit.take_egui_input(&gl_window.window);
                     let ppp = egui.egui_ctx.pixels_per_point();
                     egui.egui_ctx.begin_frame(input);
-
                     let mut rr = RedrawResponse::default();
                     if let Some(cb) = viewport_callback {
                         cb(&egui.egui_ctx);
@@ -179,8 +178,25 @@ macro_rules! tracked_window {
                     else {
                         rr = s.redraw(c, egui, &gl_window.window, clipboard);
                     }
-
                     let full_output = egui.egui_ctx.end_frame();
+
+                    if viewport_callback.is_none() {
+                        let mut remove_id = Vec::new();
+                        for id in viewportset.iter() {
+                            if !full_output.viewport_output.contains_key(&id) {
+                                println!("delete ID {:?}", id);
+                                remove_id.push(id.to_owned());
+                            }
+                        }
+                        for id in remove_id {
+                            viewportset.remove(&id);
+                        }
+                    }
+                    else {
+                        if !viewportset.contains(viewportid) {
+                            rr.quit = true;
+                        }
+                    }
 
                     for (viewport_id, viewport_output) in &full_output.viewport_output {
                         if viewport_id != &egui::viewport::ViewportId::ROOT && !viewportset.contains(viewport_id) {
