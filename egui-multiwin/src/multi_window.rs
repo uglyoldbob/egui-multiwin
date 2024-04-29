@@ -148,11 +148,11 @@ macro_rules! tracked_window {
                 /// The egui instance for this window, each window has a separate egui instance.
                 pub egui: &'a mut EguiGlow,
                 /// The actual window
-                pub window: &'a mut $window,
+                pub window: Option<&'a mut $window>,
                 /// The optional shader version for the window
                 pub shader: Option<egui_multiwin::egui_glow::ShaderVersion>,
                 /// The viewports, including root viewport
-                viewports: &'a mut egui::viewport::ViewportIdMap<Viewport>,
+                viewports: Arc<std::sync::Mutex<egui::viewport::ViewportIdMap<Viewport>>>,
                 /// The id for this particular window
                 vid: &'a egui::viewport::ViewportId,
                 /// Nothing, indicates that the type U is to be treated as if it exists.
@@ -166,6 +166,7 @@ macro_rules! tracked_window {
                 fn handle_event(
                     &mut self,
                     event: &egui_multiwin::winit::event::Event<$event>,
+                    el: &EventLoopWindowTarget<$event>,
                     c: &mut $common,
                     root_window_exists: bool,
                     gl_window: &mut egui_multiwin::tracked_window::ContextHolder<
@@ -176,16 +177,22 @@ macro_rules! tracked_window {
                     // Child window's requested control flow.
                     let mut control_flow = Some(ControlFlow::Wait); // Unless this changes, we're fine waiting until the next event comes in.
 
+                    let mut viewports = self.viewports.lock().unwrap();
                     let mut new_viewports = Vec::new();
                     let response = match event {
                         egui_multiwin::winit::event::Event::UserEvent(ue) => {
-                            Some(self.window.custom_event(
-                                ue,
-                                c,
-                                self.egui,
-                                &gl_window.window,
-                                clipboard,
-                            ))
+                            if let Some(window) = &mut self.window {
+                                Some(window.custom_event(
+                                    ue,
+                                    c,
+                                    self.egui,
+                                    &gl_window.window,
+                                    clipboard,
+                                ))
+                            }
+                            else {
+                                None
+                            }
                         }
 
                         egui_multiwin::winit::event::Event::WindowEvent { event, .. } => {
@@ -204,22 +211,43 @@ macro_rules! tracked_window {
                                     let ppp = self.egui.egui_ctx.pixels_per_point();
                                     self.egui.egui_ctx.begin_frame(input);
 
-                                    let rr = self
-                                        .window
-                                        .redraw(c, self.egui, &gl_window.window, clipboard);
+                                    let mut rr = RedrawResponse {
+                                        quit: false,
+                                        new_windows: Vec::new(),
+                                    };
+                                    if let Some(window) = &mut self.window {
+                                        rr = window.redraw(c, self.egui, &gl_window.window, clipboard);
+                                    }
 
                                     let full_output = self.egui.egui_ctx.end_frame();
                                     let viewportid = self.vid;
 
                                     for (viewport_id, viewport) in &full_output.viewport_output {
+                                        println!("VID: {:?}", viewport_id);
                                         if viewport_id != &egui::viewport::ViewportId::ROOT {
-                                            if !self.viewports.contains_key(viewport_id) {
+                                            if !viewports.contains_key(viewport_id) {
                                                 println!("Need to add viewport {:?}", viewport_id);
-                                                let viewport = Viewport {};
                                                 new_viewports.push((viewport_id.to_owned(), viewport));
+                                                let builder = egui_multiwin::egui_glow::egui_winit::create_winit_window_builder(&self.egui.egui_ctx,
+                                                    el,
+                                                    viewport.builder.clone(),
+                                                    );
+                                                let new_window = NewWindowRequest::new_viewport(
+                                                    builder,
+                                                    TrackedWindowOptions{
+                                                        shader: None,
+                                                        vsync: false,
+                                                    },
+                                                    egui_multiwin::multi_window::new_id(),
+                                                    self.viewports.clone(),
+                                                    viewport_id.to_owned(),
+                                                    viewport.builder.clone(),
+                                                );
+                                                rr.new_windows.push(new_window);
                                             }
                                         }
                                     }
+                                    println!("VID2: {:?}", viewportid);
 
                                     let viewport = full_output
                                         .viewport_output
@@ -256,7 +284,9 @@ macro_rules! tracked_window {
                                         }
 
                                         // draw things behind egui here
-                                        unsafe { self.window.opengl_before(c, self.egui.painter.gl()) };
+                                        if let Some(window) = &mut self.window {
+                                            unsafe { window.opengl_before(c, self.egui.painter.gl()) };
+                                        }
 
                                         let prim = self.egui.egui_ctx.tessellate(
                                             full_output.shapes,
@@ -270,7 +300,9 @@ macro_rules! tracked_window {
                                         );
 
                                         // draw things on top of egui here
-                                        unsafe { self.window.opengl_after(c, self.egui.painter.gl()) };
+                                        if let Some(window) = &mut self.window {
+                                            unsafe { window.opengl_after(c, self.egui.painter.gl()) };
+                                        }
 
                                         gl_window.swap_buffers().unwrap();
                                     }
@@ -294,13 +326,14 @@ macro_rules! tracked_window {
                         _ => None,
                     };
 
-                    if !root_window_exists && !self.window.is_root() {
-                        control_flow = None;
+                    if let Some(window) = &self.window {
+                        if !root_window_exists && !window.is_root() {
+                            control_flow = None;
+                        }
                     }
 
                     TrackedWindowControl {
                         requested_control_flow: control_flow,
-                        viewports_to_create: new_viewports,
                         windows_to_create: if let Some(a) = response {
                             a.new_windows
                         } else {
@@ -318,13 +351,15 @@ macro_rules! tracked_window {
                 /// The egui instance for this window, each window has a separate egui instance.
                 pub egui: Option<EguiGlow>,
                 /// The actual window data
-                pub window: $window,
+                pub window: Option<$window>,
                 /// The optional shader version for the window
                 pub shader: Option<egui_multiwin::egui_glow::ShaderVersion>,
                 /// The viewports, including root viewport
-                viewports: egui::viewport::ViewportIdMap<Viewport>,
+                viewports: Arc<std::sync::Mutex<egui::viewport::ViewportIdMap<Viewport>>>,
                 /// The id for this particular window
                 vid: egui::viewport::ViewportId,
+                /// The optional viewport builder
+                viewport_builder: Option<egui::viewport::ViewportBuilder>,
                 /// Nothing, indicates that the type U is to be treated as if it exists.
                 _phantom: std::marker::PhantomData<$event>,
             }
@@ -335,9 +370,9 @@ macro_rules! tracked_window {
                         Ok(InstantiatedWindowContainer {
                             gl_window: &mut self.gl_window,
                             egui,
-                            window: &mut self.window,
+                            window: self.window.as_mut(),
                             shader: self.shader,
-                            viewports: &mut self.viewports,
+                            viewports: self.viewports.clone(),
                             vid: &self.vid,
                             _phantom: std::marker::PhantomData,
                         })
@@ -358,12 +393,80 @@ macro_rules! tracked_window {
                     }
                 }
 
-                /// Create a new window.
-                pub fn create<TE>(
-                    window: $window,
+                /// Create a new viewport
+                pub fn create_viewport<TE>(
+                    &self,
+                    viewport_builder: egui::viewport::ViewportBuilder,
                     window_builder: egui_multiwin::winit::window::WindowBuilder,
                     event_loop: &egui_multiwin::winit::event_loop::EventLoopWindowTarget<TE>,
                     options: &TrackedWindowOptions,
+                    vid: egui::viewport::ViewportId,
+                ) -> Result<TrackedWindowContainer, DisplayCreationError> {
+                    let rdh = event_loop.raw_display_handle();
+                    let winitwindow = window_builder.build(event_loop).unwrap();
+                    let rwh = winitwindow.raw_window_handle();
+                    #[cfg(target_os = "windows")]
+                    let pref = glutin::display::DisplayApiPreference::Wgl(Some(rwh));
+                    #[cfg(target_os = "linux")]
+                    let pref = egui_multiwin::glutin::display::DisplayApiPreference::Egl;
+                    #[cfg(target_os = "macos")]
+                    let pref = glutin::display::DisplayApiPreference::Cgl;
+                    let display = unsafe { glutin::display::Display::new(rdh, pref) };
+                    if let Ok(display) = display {
+                        let configt = glutin::config::ConfigTemplateBuilder::default().build();
+                        let mut configs: Vec<glutin::config::Config> =
+                            unsafe { display.find_configs(configt) }.unwrap().collect();
+                        configs.sort_by(|a, b| a.num_samples().cmp(&b.num_samples()));
+                        // Try all configurations until one works
+                        for config in configs {
+                            let sab: SurfaceAttributesBuilder<WindowSurface> =
+                                egui_multiwin::glutin::surface::SurfaceAttributesBuilder::default();
+                            let sa = sab.build(
+                                rwh,
+                                std::num::NonZeroU32::new(winitwindow.inner_size().width).unwrap(),
+                                std::num::NonZeroU32::new(winitwindow.inner_size().height).unwrap(),
+                            );
+                            let ws = unsafe { display.create_window_surface(&config, &sa) };
+                            if let Ok(ws) = ws {
+                                let attr =
+                                    egui_multiwin::glutin::context::ContextAttributesBuilder::new()
+                                        .build(Some(rwh));
+
+                                let gl_window =
+                                    unsafe { display.create_context(&config, &attr) }.unwrap();
+
+                                return Ok(TrackedWindowContainer {
+                                    window: None,
+                                    viewport_builder: Some(viewport_builder),
+                                    gl_window: IndeterminateWindowedContext::NotCurrent(
+                                        egui_multiwin::tracked_window::ContextHolder::new(
+                                            gl_window,
+                                            winitwindow,
+                                            ws,
+                                            display,
+                                            *options,
+                                        ),
+                                    ),
+                                    egui: None,
+                                    viewports: self.viewports.clone(),
+                                    vid: vid,
+                                    shader: options.shader,
+                                    _phantom: std::marker::PhantomData,
+                                });
+                            }
+                        }
+                    }
+                    panic!("No window created");
+                }
+
+                /// Create a new window.
+                pub fn create<TE>(
+                    window: Option<$window>,
+                    window_builder: egui_multiwin::winit::window::WindowBuilder,
+                    event_loop: &egui_multiwin::winit::event_loop::EventLoopWindowTarget<TE>,
+                    options: &TrackedWindowOptions,
+                    vid: egui::viewport::ViewportId,
+                    viewports: std::sync::Arc<std::sync::Mutex<egui::viewport::ViewportIdMap<Viewport>>>,
                 ) -> Result<TrackedWindowContainer, DisplayCreationError> {
                     let rdh = event_loop.raw_display_handle();
                     let winitwindow = window_builder.build(event_loop).unwrap();
@@ -400,6 +503,7 @@ macro_rules! tracked_window {
 
                                 return Ok(TrackedWindowContainer {
                                     window,
+                                    viewport_builder: None,
                                     gl_window: IndeterminateWindowedContext::NotCurrent(
                                         egui_multiwin::tracked_window::ContextHolder::new(
                                             gl_window,
@@ -410,8 +514,8 @@ macro_rules! tracked_window {
                                         ),
                                     ),
                                     egui: None,
-                                    viewports: egui::viewport::ViewportIdMap::default(),
-                                    vid: egui::viewport::ViewportId::ROOT,
+                                    viewports,
+                                    vid: vid,
                                     shader: options.shader,
                                     _phantom: std::marker::PhantomData,
                                 });
@@ -518,6 +622,14 @@ macro_rules! tracked_window {
                                 egui.egui_ctx.set_fonts(fonts)
                             }
                             egui.egui_ctx.set_embed_viewports(false);
+
+                            if let Some(viewport_builder) = &self.viewport_builder {
+                                egui_multiwin::egui_glow::egui_winit::apply_viewport_builder_to_window(
+                                    &egui.egui_ctx,
+                                    gl_window.window(),
+                                    viewport_builder,
+                                );
+                            }
                             self.egui = Some(egui);
                         }
                         Some(_) => (),
@@ -526,6 +638,7 @@ macro_rules! tracked_window {
                     let result = if let Ok(mut window) = self.instantiate() {
                         let result = window.handle_event(
                             event,
+                            el,
                             c,
                             root_window_exists,
                             &mut gl_window,
@@ -537,9 +650,11 @@ macro_rules! tracked_window {
                     };
 
                     if result.requested_control_flow.is_none() {
-                        if self.window.can_quit(c) {
-                            // This window wants to go away. Close it.
-                            self.egui.take();
+                        if let Some(window) = &mut self.window {
+                            if window.can_quit(c) {
+                                // This window wants to go away. Close it.
+                                self.egui.take();
+                            }
                         }
                     };
 
@@ -572,8 +687,6 @@ macro_rules! tracked_window {
                 pub requested_control_flow: Option<ControlFlow>,
                 /// A list of windows to be created
                 pub windows_to_create: Vec<NewWindowRequest>,
-                /// A list of viewports to create
-                pub viewports_to_create: Vec<(egui::viewport::ViewportId, Viewport)>,
             }
 
             #[derive(egui_multiwin::thiserror::Error, Debug)]
@@ -684,6 +797,8 @@ macro_rules! multi_window {
                         window.builder,
                         event_loop,
                         &window.options,
+                        window.vid,
+                        window.viewports,
                     )?;
                     let w = twc.get_window_id();
                     let mut table = egui_multiwin::multi_window::WINDOW_TABLE.lock().unwrap();
@@ -692,17 +807,6 @@ macro_rules! multi_window {
                     }
                     self.windows.push(twc);
                     Ok(())
-                }
-
-                /// Adds a new viewport to the `MultiWindow`.
-                fn add_viewport<TE>(
-                    &mut self,
-                    id: egui::viewport::ViewportId,
-                    viewport: Viewport,
-                    _c: &mut $common,
-                    event_loop: &egui_multiwin::winit::event_loop::EventLoopWindowTarget<TE>,
-                ) {
-                    todo!();
                 }
 
                 /// Process the given event for the applicable window(s)
@@ -717,8 +821,10 @@ macro_rules! multi_window {
 
                     let mut root_window_exists = false;
                     for other in &self.windows {
-                        if other.window.is_root() {
-                            root_window_exists = true;
+                        if let Some(window) = &other.window {
+                            if window.is_root() {
+                                root_window_exists = true;
+                            }
                         }
                     }
 
@@ -735,9 +841,11 @@ macro_rules! multi_window {
                             match window_control.requested_control_flow {
                                 None => {
                                     //println!("window requested exit. Instead of sending the exit for everyone, just get rid of this one.");
-                                    if window.window.can_quit(c) {
-                                        window_control_flow.push(None);
-                                        continue;
+                                    if let Some(window) = &mut window.window {
+                                        if window.can_quit(c) {
+                                            window_control_flow.push(None);
+                                            continue;
+                                        }
                                     } else {
                                         window_control_flow.push(Some(ControlFlow::Wait));
                                     }
@@ -750,10 +858,6 @@ macro_rules! multi_window {
 
                             for new_window_request in window_control.windows_to_create {
                                 let _e = self.add(new_window_request, c, event_loop_window_target);
-                            }
-
-                            for (id, new_viewport) in window_control.viewports_to_create {
-                                self.add_viewport(id, new_viewport, c, event_loop_window_target);
                             }
                         }
                         handled_windows.push(window);
@@ -842,13 +946,64 @@ macro_rules! multi_window {
             /// A struct defining how a new window is to be created.
             pub struct NewWindowRequest {
                 /// The actual struct containing window data. The struct must implement the `TrackedWindow` trait.
-                pub window_state: $window,
+                pub window_state: Option<$window>,
                 /// Specifies how to build the window with a WindowBuilder
                 pub builder: egui_multiwin::winit::window::WindowBuilder,
                 /// Other options for the window.
                 pub options: TrackedWindowOptions,
                 /// An id to allow a user program to translate window requests into actual window ids.
                 pub id: u32,
+                /// The viewports to use
+                viewports:
+                    std::sync::Arc<std::sync::Mutex<egui::viewport::ViewportIdMap<Viewport>>>,
+                /// The viewport id for the window
+                vid: egui::viewport::ViewportId,
+                /// The optional viewport builder
+                viewport_builder: Option<egui::viewport::ViewportBuilder>,
+            }
+
+            impl NewWindowRequest {
+                /// Construct a new root window
+                pub fn new(
+                    window_state: $window,
+                    builder: egui_multiwin::winit::window::WindowBuilder,
+                    options: TrackedWindowOptions,
+                    id: u32,
+                ) -> Self {
+                    Self {
+                        window_state: Some(window_state),
+                        builder,
+                        options,
+                        id,
+                        viewports: std::sync::Arc::new(std::sync::Mutex::new(
+                            egui::viewport::ViewportIdMap::default(),
+                        )),
+                        vid: egui::viewport::ViewportId::ROOT,
+                        viewport_builder: None,
+                    }
+                }
+
+                /// Construct a new viewport window
+                pub fn new_viewport(
+                    builder: egui_multiwin::winit::window::WindowBuilder,
+                    options: TrackedWindowOptions,
+                    id: u32,
+                    viewports: std::sync::Arc<
+                        std::sync::Mutex<egui::viewport::ViewportIdMap<Viewport>>,
+                    >,
+                    vid: egui::viewport::ViewportId,
+                    viewport_builder: egui::viewport::ViewportBuilder,
+                ) -> Self {
+                    Self {
+                        window_state: None,
+                        builder,
+                        options,
+                        id,
+                        viewports,
+                        vid,
+                        viewport_builder: Some(viewport_builder),
+                    }
+                }
             }
         }
     };

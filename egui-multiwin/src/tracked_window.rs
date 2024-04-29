@@ -41,6 +41,11 @@ impl<T> ContextHolder<T> {
             options,
         }
     }
+
+    /// Get the contained window handle
+    pub fn window(&self) -> &winit::window::Window {
+        &self.window
+    }
 }
 
 impl ContextHolder<PossiblyCurrentContext> {
