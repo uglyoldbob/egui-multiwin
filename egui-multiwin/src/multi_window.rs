@@ -686,7 +686,7 @@ macro_rules! tracked_window {
                                 egui.egui_ctx.set_fonts(fonts)
                             }
                             if let Some(vb) = &self.common().vb {
-                                println!("Applying viewport builder");
+                                println!("Applying viewport builder {:?}", self.common().viewportid);
                                 egui_multiwin::egui_glow::egui_winit::apply_viewport_builder_to_window(
                                     &egui.egui_ctx,
                                     gl_window.window(),
@@ -737,7 +737,8 @@ macro_rules! tracked_window {
                                 }
                             }
                         }
-                        Self::Viewport(_w) => {
+                        Self::Viewport(w) => {
+                            w.common.egui = None;
                         }
                     }
                 }
@@ -939,7 +940,8 @@ macro_rules! multi_window {
                                             window_control_flow.push(Some(ControlFlow::Wait));
                                         }
                                     } else {
-                                        window_control_flow.push(Some(ControlFlow::Wait));
+                                        window_control_flow.push(None);
+                                        continue;
                                     }
                                     // *flow = ControlFlow::Exit
                                 }
