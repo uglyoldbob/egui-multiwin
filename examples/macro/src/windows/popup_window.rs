@@ -17,25 +17,25 @@ pub struct PopupWindow {
 impl PopupWindow {
     pub fn request(label: String) -> NewWindowRequest {
         let id = egui_multiwin::multi_window::new_id();
-        NewWindowRequest {
-            window_state: super::MyWindows::Popup(PopupWindow {
+        NewWindowRequest::new(
+            super::MyWindows::Popup(PopupWindow {
                 clicks: 0,
                 input: label.clone(),
                 id,
             }),
-            builder: egui_multiwin::winit::window::WindowBuilder::new()
+            egui_multiwin::winit::window::WindowBuilder::new()
                 .with_resizable(false)
                 .with_inner_size(egui_multiwin::winit::dpi::LogicalSize {
                     width: 400.0,
                     height: 200.0,
                 })
                 .with_title(label),
-            options: egui_multiwin::tracked_window::TrackedWindowOptions {
+            egui_multiwin::tracked_window::TrackedWindowOptions {
                 vsync: true,
                 shader: None,
             },
             id,
-        }
+        )
     }
 }
 

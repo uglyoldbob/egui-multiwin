@@ -18,26 +18,26 @@ pub struct RootWindow {
 
 impl RootWindow {
     pub fn request() -> NewWindowRequest {
-        NewWindowRequest {
-            window_state: super::MyWindows::Root(RootWindow {
+        NewWindowRequest::new(
+            super::MyWindows::Root(RootWindow {
                 button_press_count: 0,
                 num_popups_created: 0,
                 prev_time: std::time::Instant::now(),
                 fps: None,
             }),
-            builder: egui_multiwin::winit::window::WindowBuilder::new()
+            egui_multiwin::winit::window::WindowBuilder::new()
                 .with_resizable(true)
                 .with_inner_size(egui_multiwin::winit::dpi::LogicalSize {
                     width: 800.0,
                     height: 600.0,
                 })
                 .with_title("egui-multiwin root window"),
-            options: egui_multiwin::tracked_window::TrackedWindowOptions {
+            egui_multiwin::tracked_window::TrackedWindowOptions {
                 vsync: true,
                 shader: None,
             },
-            id: egui_multiwin::multi_window::new_id(),
-        }
+            egui_multiwin::multi_window::new_id(),
+        )
     }
 }
 

@@ -13,23 +13,23 @@ pub struct PopupWindow {
 
 impl PopupWindow {
     pub fn request(label: String) -> NewWindowRequest {
-        NewWindowRequest {
-            window_state: super::MyWindows::Popup(PopupWindow {
+        NewWindowRequest::new(
+            super::MyWindows::Popup(PopupWindow {
                 input: label.clone(),
             }),
-            builder: egui_multiwin::winit::window::WindowBuilder::new()
+            egui_multiwin::winit::window::WindowBuilder::new()
                 .with_resizable(false)
                 .with_inner_size(egui_multiwin::winit::dpi::LogicalSize {
                     width: 400.0,
                     height: 200.0,
                 })
                 .with_title(label),
-            options: egui_multiwin::tracked_window::TrackedWindowOptions {
+            egui_multiwin::tracked_window::TrackedWindowOptions {
                 vsync: false,
                 shader: None,
             },
-            id: egui_multiwin::multi_window::new_id(),
-        }
+            egui_multiwin::multi_window::new_id(),
+        )
     }
 }
 

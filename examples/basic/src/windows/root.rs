@@ -109,7 +109,7 @@ impl TrackedWindow for RootWindow {
                     egui_multiwin::egui::viewport::ViewportBuilder {
                         ..Default::default()
                     },
-                    |a, b| {
+                    |a, _b| {
                         egui_multiwin::egui::CentralPanel::default().show(a, |ui| {
                             ui.label("I am groot");
                         });
