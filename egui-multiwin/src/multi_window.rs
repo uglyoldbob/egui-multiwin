@@ -43,7 +43,7 @@ macro_rules! tracked_window {
             //! This module covers definition and functionality for an individual window.
 
             use std::collections::HashMap;
-            use std::{mem, sync::Arc};
+            use std::{mem, sync::{Arc, Mutex, MutexGuard}};
 
             use super::multi_window::NewWindowRequest;
 
@@ -151,7 +151,7 @@ macro_rules! tracked_window {
             /// that the TrackedWindow is interested in.
             fn handle_event(
                 s: &mut $window,
-                viewportset: &mut ViewportIdSet,
+                viewportset_arc: &Arc<Mutex<ViewportIdSet>>,
                 viewportid: &ViewportId,
                 viewport_callback: &Option<Arc<DeferredViewportUiCallback>>,
                 event: &egui_multiwin::winit::event::Event<$event>,
@@ -166,6 +166,7 @@ macro_rules! tracked_window {
             ) -> TrackedWindowControl {
                 // Child window's requested control flow.
                 let mut control_flow = Some(ControlFlow::Wait); // Unless this changes, we're fine waiting until the next event comes in.
+                let mut viewportset = viewportset_arc.lock().unwrap();
 
                 let mut redraw = |viewport_callback: &Option<Arc<DeferredViewportUiCallback>>| {
                     let input = egui.egui_winit.take_egui_input(&gl_window.window);
@@ -217,6 +218,7 @@ macro_rules! tracked_window {
                                 egui_multiwin::multi_window::new_id(),
                                 viewport_output.builder.clone(),
                                 viewport_id.to_owned(),
+                                viewportset_arc.to_owned(),
                                 viewport_output.viewport_ui_cb.to_owned(),
                             );
                             println!("Add new viewport window {:?}", viewport_id);
@@ -333,6 +335,8 @@ macro_rules! tracked_window {
                 pub egui: Option<EguiGlow>,
                 /// The actual window
                 pub window: $window,
+                /// The viewport set
+                viewportset: Arc<Mutex<ViewportIdSet>>,
                 /// The viewport id for the window
                 viewportid: ViewportId,
                 /// The optional shader version for the window
@@ -361,7 +365,7 @@ macro_rules! tracked_window {
                 /// Create a new window.
                 pub fn create<TE>(
                     window: $window,
-                    viewportset: &mut ViewportIdSet,
+                    viewportset: Arc<Mutex<ViewportIdSet>>,
                     viewportid: &ViewportId,
                     viewportcb: Option<std::sync::Arc<DeferredViewportUiCallback>>,
                     window_builder: egui_multiwin::winit::window::WindowBuilder,
@@ -405,6 +409,7 @@ macro_rules! tracked_window {
                                 return Ok(TrackedWindowContainer {
                                     window,
                                     viewportid: viewportid.to_owned(),
+                                    viewportset: viewportset.clone(),
                                     gl_window: IndeterminateWindowedContext::NotCurrent(
                                         egui_multiwin::tracked_window::ContextHolder::new(
                                             gl_window,
@@ -474,7 +479,6 @@ macro_rules! tracked_window {
                 pub fn handle_event_outer(
                     &mut self,
                     c: &mut $common,
-                    viewportset: &mut ViewportIdSet,
                     event: &winit::event::Event<$event>,
                     el: &EventLoopWindowTarget<$event>,
                     root_window_exists: bool,
@@ -541,7 +545,7 @@ macro_rules! tracked_window {
                         Some(egui) => {
                             let result = handle_event(
                                 &mut self.window,
-                                viewportset,
+                                &self.viewportset,
                                 &self.viewportid,
                                 &self.viewportcb,
                                 event,
@@ -622,6 +626,7 @@ macro_rules! multi_window {
             //! This defines the MultiWindow struct. This is the main struct used in the main function of a user application.
 
             use std::collections::HashMap;
+            use std::sync::{Arc, Mutex};
 
             use egui_multiwin::{
                 tracked_window::TrackedWindowOptions,
@@ -648,8 +653,6 @@ macro_rules! multi_window {
                 fonts: HashMap<String, egui_multiwin::egui::FontData>,
                 /// The clipboard
                 clipboard: egui_multiwin::arboard::Clipboard,
-                /// The viewport set
-                viewportset: ViewportIdSet,
             }
 
             impl Default for MultiWindow {
@@ -665,7 +668,6 @@ macro_rules! multi_window {
                         windows: vec![],
                         fonts: HashMap::new(),
                         clipboard: egui_multiwin::arboard::Clipboard::new().unwrap(),
-                        viewportset: ViewportIdSet::default(),
                     }
                 }
 
@@ -717,7 +719,7 @@ macro_rules! multi_window {
                 ) -> Result<(), DisplayCreationError> {
                     let twc = TrackedWindowContainer::create::<TE>(
                         window.window_state,
-                        &mut self.viewportset,
+                        window.viewportset,
                         &window
                             .viewport_id
                             .unwrap_or(egui::viewport::ViewportId::ROOT),
@@ -757,7 +759,6 @@ macro_rules! multi_window {
                         if window.is_event_for_window(event) {
                             let window_control = window.handle_event_outer(
                                 c,
-                                &mut self.viewportset,
                                 event,
                                 event_loop_window_target,
                                 root_window_exists,
@@ -882,6 +883,8 @@ macro_rules! multi_window {
                 viewport: Option<egui_multiwin::egui::ViewportBuilder>,
                 /// The viewport id
                 viewport_id: Option<ViewportId>,
+                /// The viewport set, shared among the set of related windows
+                viewportset: Arc<Mutex<ViewportIdSet>>,
                 /// The viewport callback
                 viewport_callback: Option<std::sync::Arc<DeferredViewportUiCallback>>,
             }
@@ -901,6 +904,7 @@ macro_rules! multi_window {
                         id,
                         viewport: None,
                         viewport_id: None,
+                        viewportset: Arc::new(Mutex::new(egui::viewport::ViewportIdSet::default())),
                         viewport_callback: None,
                     }
                 }
@@ -912,6 +916,7 @@ macro_rules! multi_window {
                     id: u32,
                     vp_builder: egui_multiwin::egui::ViewportBuilder,
                     vp_id: ViewportId,
+                    viewportset: Arc<Mutex<ViewportIdSet>>,
                     vpcb: Option<std::sync::Arc<DeferredViewportUiCallback>>,
                 ) -> Self {
                     println!("New viewport window {:?}", vp_id);
@@ -923,6 +928,7 @@ macro_rules! multi_window {
                         viewport: Some(vp_builder),
                         viewport_id: Some(vp_id),
                         viewport_callback: vpcb,
+                        viewportset,
                     }
                 }
             }
