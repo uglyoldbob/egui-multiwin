@@ -220,7 +220,6 @@ macro_rules! tracked_window {
                             let mut remove_id = Vec::new();
                             for id in viewportset.iter() {
                                 if !full_output.viewport_output.contains_key(&id) {
-                                    println!("delete ID {:?}", id);
                                     remove_id.push(id.to_owned());
                                 }
                             }
@@ -255,7 +254,6 @@ macro_rules! tracked_window {
                                     self.viewportset.to_owned(),
                                     viewport_output.viewport_ui_cb.to_owned(),
                                 );
-                                println!("Add new viewport window {:?}", viewport_id);
                                 viewportset.insert(viewport_id.to_owned());
                                 rr.new_windows.push(vp);
                             }
@@ -467,7 +465,6 @@ macro_rules! tracked_window {
                         IndeterminateWindowedContext::PossiblyCurrent(w) => Some(w.window.id()),
                         IndeterminateWindowedContext::NotCurrent(w) => Some(w.window.id()),
                         IndeterminateWindowedContext::None => {
-                            println!("Not able to get window id");
                             None
                         }
                     }
@@ -516,7 +513,6 @@ macro_rules! tracked_window {
 
                                 let gl_window =
                                     unsafe { display.create_context(&config, &attr) }.unwrap();
-                                println!("Making window with id {:?}", viewportid);
 
                                 let wcommon = CommonWindowData {
                                     viewportid: viewportid.to_owned(),
@@ -674,7 +670,6 @@ macro_rules! tracked_window {
 
                             let egui = egui_glow::EguiGlow::new(el, gl, self.common().shader, None);
                             {
-                                println!("Setting fonts");
                                 let mut fonts = egui::FontDefinitions::default();
                                 for (name, font) in fontmap {
                                     fonts.font_data.insert(name.clone(), font.clone());
@@ -686,7 +681,6 @@ macro_rules! tracked_window {
                                 egui.egui_ctx.set_fonts(fonts)
                             }
                             if let Some(vb) = &self.common().vb {
-                                println!("Applying viewport builder {:?}", self.common().viewportid);
                                 egui_multiwin::egui_glow::egui_winit::apply_viewport_builder_to_window(
                                     &egui.egui_ctx,
                                     gl_window.window(),
@@ -951,7 +945,6 @@ macro_rules! multi_window {
                             }
 
                             for new_window_request in window_control.windows_to_create {
-                                println!("Adding window");
                                 let _e = self.add(new_window_request, c, event_loop_window_target);
                             }
                         }
