@@ -9,7 +9,6 @@ use egui_multiwin::egui_glow::EguiGlow;
 
 use crate::AppCommon;
 
-#[derive(Clone)]
 pub struct PopupWindow {
     pub input: String,
 }

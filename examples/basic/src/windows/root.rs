@@ -9,7 +9,6 @@ use crate::AppCommon;
 
 use super::popup_window::PopupWindow;
 
-#[derive(Clone)]
 pub struct RootWindow {
     pub button_press_count: u32,
     pub num_popups_created: u32,

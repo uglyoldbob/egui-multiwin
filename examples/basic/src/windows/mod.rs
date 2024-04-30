@@ -8,7 +8,6 @@ pub mod popup_window;
 pub mod root;
 pub mod transparent_window;
 
-#[derive(Clone)]
 #[enum_dispatch(TrackedWindow)]
 pub enum MyWindows {
     Root(root::RootWindow),
