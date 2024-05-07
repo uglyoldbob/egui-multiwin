@@ -150,10 +150,12 @@ macro_rules! tracked_window {
             pub enum WindowInstanceThings<'a> {
                 /// A root window
                 PlainWindow {
+                    /// The contents of the window
                     window: &'a mut $window,
                 },
                 /// A viewport window
                 Viewport {
+                    /// A placeholder value
                     b: u8,
                 },
             }
@@ -1071,6 +1073,7 @@ macro_rules! multi_window {
                     }
                 }
 
+                /// Construct a new viewport window
                 pub fn new_viewport(
                     builder: egui_multiwin::winit::window::WindowBuilder,
                     options: TrackedWindowOptions,

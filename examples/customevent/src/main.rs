@@ -1,9 +1,15 @@
+#![deny(missing_docs)]
+#![deny(clippy::missing_docs_in_private_items)]
+
+//! An example of how to use custom events
+
 use std::collections::HashSet;
 
 use egui_multiwin::winit::{event_loop::EventLoopProxy, window::WindowId};
 
 use egui_multiwin_dynamic::multi_window::{MultiWindow, NewWindowRequest};
 
+/// Macro generated code
 pub mod egui_multiwin_dynamic {
     egui_multiwin::tracked_window!(
         crate::AppCommon,
@@ -26,6 +32,7 @@ use windows::{
     root::{self},
 };
 
+/// Data common to all windows
 pub struct AppCommon {
     clicks: u32,
     root_window: u32,
@@ -33,6 +40,7 @@ pub struct AppCommon {
     sender: EventLoopProxy<CustomEvent>,
 }
 
+/// The custom event that is passed to windows in the program
 #[derive(Debug)]
 pub struct CustomEvent {
     window: Option<WindowId>,

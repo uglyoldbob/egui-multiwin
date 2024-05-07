@@ -1,10 +1,18 @@
+#![deny(missing_docs)]
+#![deny(clippy::missing_docs_in_private_items)]
+
+//! Shows a very simple example with minimal code
+
+/// Macro generated code
 pub mod egui_multiwin_dynamic {
     egui_multiwin::tracked_window!(crate::AppCommon, crate::CustomEvent, crate::MyWindows);
     egui_multiwin::multi_window!(crate::AppCommon, crate::CustomEvent, crate::MyWindows);
 }
 
+/// The windows for the program
 #[enum_dispatch(TrackedWindow)]
 pub enum MyWindows {
+    /// A popup window
     Popup(PopupWindow),
 }
 
@@ -16,10 +24,12 @@ use egui_multiwin_dynamic::tracked_window::RedrawResponse;
 use egui_multiwin_dynamic::tracked_window::TrackedWindow;
 use std::sync::Arc;
 
+/// Data common to all windows
 pub struct AppCommon {
     clicks: u32,
 }
 
+/// Custom event type passed to windows
 #[derive(Debug)]
 pub struct CustomEvent {
     window: Option<egui_multiwin::winit::window::WindowId>,
@@ -32,9 +42,11 @@ impl CustomEvent {
     }
 }
 
+/// The popup window
 pub struct PopupWindow {}
 
 impl PopupWindow {
+    /// Create a request to create a window
     pub fn request() -> NewWindowRequest {
         NewWindowRequest::new(
             MyWindows::Popup(PopupWindow {}),

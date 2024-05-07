@@ -1,5 +1,11 @@
+#![deny(missing_docs)]
+#![deny(clippy::missing_docs_in_private_items)]
+
+//! This is a basic example
+
 use egui_multiwin_dynamic::multi_window::{MultiWindow, NewWindowRequest};
 
+/// Macro generated code
 pub mod egui_multiwin_dynamic {
     egui_multiwin::tracked_window!(
         crate::AppCommon,
@@ -22,6 +28,7 @@ use windows::{
     root::{self},
 };
 
+/// The common data that all windows have access to
 pub struct AppCommon {
     clicks: u32,
 }

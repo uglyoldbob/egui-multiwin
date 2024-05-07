@@ -1,5 +1,11 @@
+#![deny(missing_docs)]
+#![deny(clippy::missing_docs_in_private_items)]
+
+//! An example showing how to use vsync
+
 use egui_multiwin_dynamic::multi_window::{MultiWindow, NewWindowRequest};
 
+/// Macro generated code
 pub mod egui_multiwin_dynamic {
     egui_multiwin::tracked_window!(
         crate::AppCommon,
@@ -22,6 +28,7 @@ use windows::{
     root::{self},
 };
 
+/// Data common to all windows in the program
 pub struct AppCommon {
     clicks: u32,
 }
