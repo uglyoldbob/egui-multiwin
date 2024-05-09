@@ -9,11 +9,14 @@ use egui_multiwin::egui_glow::EguiGlow;
 
 use crate::AppCommon;
 
+/// The transparent window
 pub struct PopupWindow {
+    /// A string to label the window
     pub input: String,
 }
 
 impl PopupWindow {
+    /// Request a new window
     pub fn request(label: String) -> NewWindowRequest {
         NewWindowRequest::new(
             super::MyWindows::Transparent(PopupWindow {

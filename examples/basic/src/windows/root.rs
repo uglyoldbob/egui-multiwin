@@ -1,3 +1,5 @@
+//! Code for the root window of the project.
+
 use crate::egui_multiwin_dynamic::{
     multi_window::NewWindowRequest,
     tracked_window::{RedrawResponse, TrackedWindow},
@@ -9,15 +11,22 @@ use crate::AppCommon;
 
 use super::popup_window::PopupWindow;
 
+/// The root window
 pub struct RootWindow {
+    /// The nnumber of times a button has been clicked
     pub button_press_count: u32,
+    /// The number of popus created
     pub num_popups_created: u32,
+    /// True when the groot viewport should be visible
     summon_groot: bool,
+    /// The last time an update was performed
     prev_time: std::time::Instant,
+    /// The calculated frames per second of the application
     fps: Option<f32>,
 }
 
 impl RootWindow {
+    /// Request a new window
     pub fn request() -> NewWindowRequest {
         NewWindowRequest::new(
             super::MyWindows::Root(RootWindow {

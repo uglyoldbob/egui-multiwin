@@ -1,3 +1,5 @@
+//! Code for the root window
+
 use crate::egui_multiwin_dynamic::{
     multi_window::NewWindowRequest,
     tracked_window::{RedrawResponse, TrackedWindow},
@@ -9,14 +11,20 @@ use crate::{AppCommon, CustomEvent};
 
 use super::popup_window::PopupWindow;
 
+/// The root window
 pub struct RootWindow {
+    /// The number of times a button has been pressed
     pub button_press_count: u32,
+    /// The number of popups created
     pub num_popups_created: u32,
+    /// The last time the window was updated
     prev_time: std::time::Instant,
+    /// The calculated frames per second of the window
     fps: Option<f32>,
 }
 
 impl RootWindow {
+    /// Request a new window
     pub fn request() -> NewWindowRequest {
         NewWindowRequest::new(
             super::MyWindows::Root(RootWindow {

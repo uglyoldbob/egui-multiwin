@@ -26,17 +26,21 @@ use std::sync::Arc;
 
 /// Data common to all windows
 pub struct AppCommon {
+    /// Number of times a button has been clicked
     clicks: u32,
 }
 
 /// Custom event type passed to windows
 #[derive(Debug)]
 pub struct CustomEvent {
+    /// The optional window id
     window: Option<egui_multiwin::winit::window::WindowId>,
+    /// The message
     message: u32,
 }
 
 impl CustomEvent {
+    /// Return the window id
     fn window_id(&self) -> Option<egui_multiwin::winit::window::WindowId> {
         self.window
     }
@@ -90,6 +94,7 @@ impl TrackedWindow for PopupWindow {
 }
 
 impl AppCommon {
+    /// Process events
     fn process_event(&mut self, event: CustomEvent) -> Vec<NewWindowRequest> {
         let mut windows_to_create = vec![];
         println!("Received an event {:?}", event);

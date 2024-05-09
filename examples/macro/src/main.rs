@@ -1,5 +1,11 @@
+#![deny(missing_docs)]
+#![deny(clippy::missing_docs_in_private_items)]
+
+//! Another example program. Shows how request_repaint can be used.
+
 use std::collections::HashSet;
 
+/// Macro generated code
 pub mod egui_multiwin_dynamic {
     egui_multiwin::tracked_window!(
         crate::AppCommon,
@@ -17,6 +23,7 @@ use egui_multiwin::winit::{event_loop::EventLoopProxy, window::WindowId};
 
 mod windows;
 
+/// The custom font to use for the example
 const COMPUTER_MODERN_FONT: &[u8] = include_bytes!("./cmunbtl.ttf");
 
 use windows::{
@@ -24,26 +31,36 @@ use windows::{
     root::{self},
 };
 
+/// The common data structure for the program
 pub struct AppCommon {
+    /// Number of times a button has been clicked
     clicks: u32,
+    /// The id of the root window
     root_window: u32,
+    /// The id of all popup windows
     popup_windows: HashSet<u32>,
+    /// How messages can be sent to other windows
     sender: EventLoopProxy<CustomEvent>,
 }
 
 #[derive(Debug)]
+/// The custom event
 pub struct CustomEvent {
+    /// The optional window id for the targeted window
     window: Option<WindowId>,
+    /// The messaget to deliver
     message: u32,
 }
 
 impl CustomEvent {
+    /// Get the window id from the event
     fn window_id(&self) -> Option<WindowId> {
         self.window
     }
 }
 
 impl AppCommon {
+    /// Process events
     fn process_event(
         &mut self,
         event: CustomEvent,

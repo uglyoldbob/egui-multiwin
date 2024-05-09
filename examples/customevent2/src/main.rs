@@ -25,6 +25,7 @@ pub mod egui_multiwin_dynamic {
 
 mod windows;
 
+/// The custom font to use for the example
 const COMPUTER_MODERN_FONT: &[u8] = include_bytes!("./cmunbtl.ttf");
 
 use windows::{
@@ -34,26 +35,34 @@ use windows::{
 
 /// Data common to all windows
 pub struct AppCommon {
+    /// The number of times a button has been clicked
     clicks: u32,
+    /// The id of the root window
     root_window: u32,
+    /// The ids of all popup windows
     popup_windows: HashSet<u32>,
+    /// How messages are sent to windows
     sender: EventLoopProxy<CustomEvent>,
 }
 
 /// The custom event that is passed around
 #[derive(Debug)]
 pub struct CustomEvent {
+    /// The target window
     window: Option<WindowId>,
+    /// The message
     message: u32,
 }
 
 impl CustomEvent {
+    /// Get the window id from the event
     fn window_id(&self) -> Option<WindowId> {
         self.window
     }
 }
 
 impl AppCommon {
+    /// Process events
     fn process_event(&mut self, event: CustomEvent) -> Vec<NewWindowRequest> {
         let mut windows = vec![];
         match event.message {

@@ -8,11 +8,14 @@ use egui_multiwin::egui_glow::EguiGlow;
 
 use crate::AppCommon;
 
+/// The popup window
 pub struct PopupWindow {
+    /// The label for the window
     pub input: String,
 }
 
 impl PopupWindow {
+    /// Request a new window
     pub fn request(label: String) -> NewWindowRequest {
         NewWindowRequest::new(
             super::MyWindows::Popup(PopupWindow {

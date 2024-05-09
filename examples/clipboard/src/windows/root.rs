@@ -1,3 +1,5 @@
+//! The code for the root window
+
 use crate::egui_multiwin_dynamic::{
     multi_window::NewWindowRequest,
     tracked_window::{RedrawResponse, TrackedWindow},
@@ -9,13 +11,18 @@ use crate::AppCommon;
 
 use super::popup_window::PopupWindow;
 
+/// The root window
 pub struct RootWindow {
+    /// The number of times the button has been pressed
     pub button_press_count: u32,
+    /// The number of popups created
     pub num_popups_created: u32,
+    /// Some random stuff to demo the clipboard
     stuff: String,
 }
 
 impl RootWindow {
+    /// Request a new window
     pub fn request() -> NewWindowRequest {
         NewWindowRequest::new(
             super::MyWindows::Root(RootWindow {

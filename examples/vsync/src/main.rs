@@ -21,6 +21,7 @@ pub mod egui_multiwin_dynamic {
 
 mod windows;
 
+/// The custom font to use for the example
 const COMPUTER_MODERN_FONT: &[u8] = include_bytes!("./cmunbtl.ttf");
 
 use windows::{
@@ -30,10 +31,12 @@ use windows::{
 
 /// Data common to all windows in the program
 pub struct AppCommon {
+    /// The number of times a button has been clicked
     clicks: u32,
 }
 
 impl AppCommon {
+    /// Process events, do nothing
     fn process_event(&mut self, _event: egui_multiwin::NoEvent) -> Vec<NewWindowRequest> {
         Vec::new()
     }

@@ -8,13 +8,19 @@ use egui_multiwin::egui_glow::EguiGlow;
 
 use crate::AppCommon;
 use crate::CustomEvent;
+
+/// The popup window
 pub struct PopupWindow {
+    /// The number of times a button has been clicked
     clicks: u32,
+    /// The label for the window
     pub input: String,
+    /// The id of the window
     id: u32,
 }
 
 impl PopupWindow {
+    /// Request a new window
     pub fn request(label: String) -> NewWindowRequest {
         let id = egui_multiwin::multi_window::new_id();
         NewWindowRequest::new(
