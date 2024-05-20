@@ -202,7 +202,6 @@ macro_rules! tracked_window {
                     clipboard: &mut egui_multiwin::arboard::Clipboard,
                 ) -> TrackedWindowControl {
                     // Child window's requested control flow.
-                    let mut control_flow = Some(ControlFlow::Wait); // Unless this changes, we're fine waiting until the next event comes in.
                     let mut viewportset = self.viewportset.lock().unwrap();
 
                     let mut redraw = || {
@@ -264,20 +263,20 @@ macro_rules! tracked_window {
                         let vp_output = full_output
                             .viewport_output
                             .get(self.viewportid);
-                        let repaint_after = vp_output.map(|v| v.repaint_delay).unwrap_or(std::time::Duration::from_millis(0));
+                        let repaint_after = vp_output.map(|v| v.repaint_delay).unwrap_or(std::time::Duration::from_millis(1000));
 
                         if rr.quit {
-                            control_flow = None;
+                            gl_window.control_flow = None;
                         } else if repaint_after.is_zero() {
                             gl_window.window.request_redraw();
-                            control_flow = Some(egui_multiwin::winit::event_loop::ControlFlow::Poll);
+                            gl_window.control_flow = Some(egui_multiwin::winit::event_loop::ControlFlow::Poll);
                         } else if repaint_after.as_millis() > 0 && repaint_after.as_millis() < 10000 {
-                            control_flow =
+                            gl_window.control_flow =
                                 Some(egui_multiwin::winit::event_loop::ControlFlow::WaitUntil(
                                     std::time::Instant::now() + repaint_after,
                                 ));
                         } else {
-                            control_flow = Some(egui_multiwin::winit::event_loop::ControlFlow::Wait);
+                            gl_window.control_flow = Some(egui_multiwin::winit::event_loop::ControlFlow::Wait);
                         };
 
                         {
@@ -325,14 +324,35 @@ macro_rules! tracked_window {
                             }
                         }
 
-                        egui_multiwin::winit::event::Event::WindowEvent { event, .. } => {
+                        egui_multiwin::winit::event::Event::NewEvents(sc) => {
+                            match sc {
+                                egui_multiwin::winit::event::StartCause::ResumeTimeReached{..} => {
+                                    gl_window.window.request_redraw();
+                                    gl_window.control_flow = Some(ControlFlow::Poll); //?
+                                }
+                                egui_multiwin::winit::event::StartCause::WaitCancelled{start, requested_resume} => {
+                                    if let Some(resume) = requested_resume {
+                                        gl_window.control_flow = Some(ControlFlow::WaitUntil(resume.to_owned()));
+                                    }
+                                }
+                                egui_multiwin::winit::event::StartCause::Poll => {
+                                    
+                                }
+                                egui_multiwin::winit::event::StartCause::Init => {
+
+                                }
+                            }
+                            None
+                        }
+
+                        egui_multiwin::winit::event::Event::WindowEvent { event, window_id } => {
                             let mut redraw_thing = None;
                             match event {
                                 egui_multiwin::winit::event::WindowEvent::Resized(physical_size) => {
                                     gl_window.resize(*physical_size);
                                 }
                                 egui_multiwin::winit::event::WindowEvent::CloseRequested => {
-                                    control_flow = None;
+                                    gl_window.control_flow = None;
                                 }
                                 egui_multiwin::winit::event::WindowEvent::RedrawRequested => {
                                     redraw_thing = Some(redraw());
@@ -340,9 +360,15 @@ macro_rules! tracked_window {
                                 _ => {}
                             }
 
-                            let resp = self.egui.on_window_event(&gl_window.window, event);
-                            if resp.repaint {
-                                gl_window.window.request_redraw();
+                            match event {
+                                egui_multiwin::winit::event::WindowEvent::RedrawRequested => {
+                                }
+                                _ => {
+                                    let resp = self.egui.on_window_event(&gl_window.window, event);
+                                    if resp.repaint {
+                                        gl_window.window.request_redraw();
+                                    }
+                                }
                             }
 
                             redraw_thing
@@ -357,12 +383,12 @@ macro_rules! tracked_window {
 
                     if let Some(window) = self.window.window_data() {
                         if !root_window_exists && !window.is_root() {
-                            control_flow = None;
+                            gl_window.control_flow = None;
                         }
                     }
 
                     TrackedWindowControl {
-                        requested_control_flow: control_flow,
+                        requested_control_flow: gl_window.control_flow,
                         windows_to_create: if let Some(a) = response {
                             a.new_windows
                         } else {
@@ -689,6 +715,7 @@ macro_rules! tracked_window {
                                     vb,
                                 );
                             }
+                            egui.egui_ctx.set_embed_viewports(false);
                             self.common_mut().egui = Some(egui);
                         }
                         Some(_) => (),

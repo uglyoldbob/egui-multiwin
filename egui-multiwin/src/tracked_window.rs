@@ -9,6 +9,7 @@ use glutin::prelude::{NotCurrentGlContext, PossiblyCurrentGlContext};
 use glutin::surface::GlSurface;
 use glutin::surface::WindowSurface;
 use thiserror::Error;
+use winit::event_loop::ControlFlow;
 
 /// A holder of context and related items
 pub struct ContextHolder<T> {
@@ -22,6 +23,8 @@ pub struct ContextHolder<T> {
     display: glutin::display::Display,
     /// The options for the display
     options: TrackedWindowOptions,
+    /// The last control flow of the window
+    pub control_flow: Option<ControlFlow>,
 }
 
 impl<T> ContextHolder<T> {
@@ -39,6 +42,7 @@ impl<T> ContextHolder<T> {
             ws,
             display,
             options,
+            control_flow: Some(ControlFlow::Poll),
         }
     }
 }
@@ -101,6 +105,7 @@ impl ContextHolder<NotCurrentContext> {
             ws: self.ws,
             display: self.display,
             options: self.options,
+            control_flow: self.control_flow,
         };
         Ok(s)
     }

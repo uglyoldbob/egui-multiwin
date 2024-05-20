@@ -1,6 +1,6 @@
 [package]
 name = "egui-multiwin"
-version = "0.5.1"
+version = "0.5.2"
 description="A crate that allows for multiple windows with egui"
 license = "MIT OR Apache-2.0"
 edition = "2018"

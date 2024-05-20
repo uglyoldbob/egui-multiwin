@@ -40,6 +40,7 @@ pub mod multi_window;
 pub mod tracked_window;
 
 /// A generic non-event providing struct that users can use when they don't need custom events.
+#[derive(Debug)]
 pub struct NoEvent {}
 
 impl NoEvent {
